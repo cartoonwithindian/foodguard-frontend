@@ -31,6 +31,62 @@ import { isOnline, NETWORK_TIMEOUTS } from "@/lib/network/network-status";
 import { canCompressClientSide, compressImageForUpload } from "@/lib/image/compress";
 import { logger } from "@/lib/logger";
 
+/** A visually-similar product returned by the visual search service. */
+type VisualSearchHit = {
+  rank?: number;
+  productName?: string;
+  productId?: string | null;
+  score?: number;
+  imagePath?: string | null;
+};
+
+/** Optional public base URL for the visual-search product images. */
+const VISUAL_IMAGES_URL = (
+  process.env.NEXT_PUBLIC_VISUAL_IMAGES_URL || ""
+).replace(/\/+$/, "");
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)));
+}
+
+function visualImageUrl(hit: VisualSearchHit): string | undefined {
+  const imagePath = hit.imagePath;
+  if (!imagePath || !VISUAL_IMAGES_URL) return undefined;
+  const clean = decodeHtmlEntities(imagePath.replace(/^\/+/, ""));
+  return `${VISUAL_IMAGES_URL}/${clean.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+/**
+ * Convert visual-search hits into IdentifiedProduct candidates so the photo
+ * scan can offer them in the same "candidates" picker used by name search.
+ * The FAISS score is an L2 distance (lower = closer), so confidence here is a
+ * rough heuristic, not a probability.
+ */
+function visualHitsToCandidates(hits: VisualSearchHit[] | null | undefined): IdentifiedProduct[] {
+  if (!hits || hits.length === 0) return [];
+  return hits.map((hit, index) => {
+    const name = hit.productName?.trim() || "Unknown Product";
+    const distance = typeof hit.score === "number" ? hit.score : 0;
+    const confidence = Math.max(0, Math.min(1, distance + 2 > 0 ? 1 / (1 + distance) : 0));
+    return {
+      id: hit.productId || `visual-${index + 1}`,
+      barcode: "",
+      name,
+      brand: "",
+      category: "",
+      imageUrl: visualImageUrl(hit),
+      source: "photo_ocr",
+      sourceDetail: "visual_search",
+      confidence,
+      resolutionSource: "network",
+    } satisfies IdentifiedProduct;
+  });
+}
+
 export type BarcodeLookupResponse = {
   success: boolean;
   data?: {
@@ -103,6 +159,13 @@ export type ScanLabelResponse = {
     confidence: number;
   };
   sources?: string[];
+  similarProducts?: Array<{
+    rank?: number;
+    productName?: string;
+    productId?: string | null;
+    score?: number;
+    imagePath?: string | null;
+  }>;
   rawText?: string;
   error?: string;
 };
@@ -441,9 +504,14 @@ export async function resolveProductByPhoto(
     extracted.productName = nameGuess || undefined;
 
     // 1. Barcode detected on the photo -> resolve straight through barcode.
+    let barcodeResolution: ProductResolution | null = null;
     if (barcodeValue) {
-      const resolution = await resolveProductByBarcode(barcodeValue, "photo_ocr");
-      return { resolution, extracted };
+      barcodeResolution = await resolveProductByBarcode(barcodeValue, "photo_ocr");
+      if (barcodeResolution.status === "resolved") {
+        return { resolution: { ...barcodeResolution, extracted }, extracted };
+      }
+      // Unmatched barcode -> fall through so visual-similar candidates (say,
+      // barcode present but unknown product) can still rescue the scan.
     }
 
     // 2. No barcode but OCR gave a name -> run name matching.
@@ -452,16 +520,33 @@ export async function resolveProductByPhoto(
       if (resolution.status === "candidates" || resolution.status === "resolved") {
         return { resolution: { ...resolution, extracted }, extracted };
       }
+    }
+
+    // 3. Name match missed but the visual search engine found similar
+    //    products -> offer them as pickable candidates so the user can still
+    //    "find the product" from the photo.
+    const visualCandidates = visualHitsToCandidates(json?.similarProducts ?? null);
+    if (visualCandidates.length > 0) {
       return {
-        resolution: { status: "not_found", query: nameGuess, extracted },
+        resolution: {
+          status: "candidates",
+          candidates: visualCandidates,
+          query: barcodeValue ? undefined : (nameGuess ?? "visual"),
+          extracted,
+        },
         extracted,
       };
     }
 
-    // 3. Nothing usable detected.
+    // 4. Nothing usable detected. If a barcode was present, report its
+    //    (failed) lookup result so the UI can show the "not found" screen.
+    if (barcodeResolution) {
+      return { resolution: { ...barcodeResolution, extracted }, extracted };
+    }
     return {
       resolution: {
         status: "not_found",
+        query: nameGuess ?? undefined,
         extracted,
       },
       extracted,
