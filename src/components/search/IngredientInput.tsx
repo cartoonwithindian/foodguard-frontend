@@ -81,7 +81,7 @@ export function IngredientInput({
             <button
               type="button"
               onClick={handlePaste}
-              className="rounded-lg border border-border bg-card p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="min-h-11 min-w-11 rounded-lg border border-border bg-card p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label="Paste from clipboard"
             >
               <ClipboardPaste className="size-4" />
@@ -89,7 +89,7 @@ export function IngredientInput({
             <button
               type="submit"
               disabled={!value.trim()}
-              className="rounded-xl bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="min-h-11 rounded-xl bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {searchButton}
             </button>

@@ -105,7 +105,7 @@ export function AuditLog({ entries, labels }: AuditLogProps) {
                     {entry.admin}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3">
-                    <span className="text-[10px] font-medium text-muted-foreground/60 uppercase">
+                    <span className="text-xs font-medium text-muted-foreground/60 uppercase">
                       {entry.targetType.replace("_", " ")}
                     </span>{" "}
                     <span className="font-medium text-foreground">{entry.target}</span>

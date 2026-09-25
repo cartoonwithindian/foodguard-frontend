@@ -64,7 +64,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Link>
 
         <div className="mt-10 px-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/60">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/60">
             Your food safety workspace
           </p>
         </div>
@@ -94,7 +94,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 />
                 <span>{label}</span>
                 {label === "Scan Product" && (
-                  <span className="ml-auto rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-light">
+                  <span className="ml-auto rounded-full bg-primary/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary-light">
                     Start
                   </span>
                 )}
@@ -140,7 +140,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-3">
           <p className="text-xs font-semibold text-white">Make informed choices</p>
-          <p className="mt-1 text-[11px] leading-4 text-sidebar-foreground/70">
+          <p className="mt-1 text-xs leading-4 text-sidebar-foreground/70">
             Scan, understand, and keep your food awareness going.
           </p>
         </div>

@@ -32,6 +32,24 @@
   --foodguard-shadow: 0 4px 16px rgba(16, 35, 28, 0.06);
 }
 
+/*
+ * Every rem-based size scales off this root, so a 14px root also shrinks the
+ * touch targets: `min-h-11` lands at 39px and `text-xs` at 10.5px, both under
+ * the 44px/12px minimums. Below the `lg` breakpoint, where input is by
+ * definition a fingertip rather than a cursor, scale the root back up to 16px.
+ * That corrects text and hit areas together in one place and leaves the
+ * desktop layout untouched.
+ *
+ * This has to sit outside `@layer base`: the token block above is unlayered,
+ * and unlayered rules outrank layered ones regardless of specificity, so an
+ * override nested in the layer would be silently ignored.
+ */
+@media (max-width: 1023px) {
+  :root {
+    --font-size: 16px;
+  }
+}
+
 .dark {
   --background: #0f1d17;
   --foreground: #eef7f2;
@@ -122,7 +140,10 @@
 
   .foodguard-eyebrow {
     color: var(--muted-foreground);
-    font-size: 0.72rem;
+    /* In px, not rem: the root is 14px from `lg` up, so a rem value would put
+       this label back under the 12px text minimum on desktop (0.72rem = 10.1px)
+       even after the mobile root bump below. */
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;

@@ -41,7 +41,7 @@ export function AdminHeader({ labels, onToggleSidebar }: AdminHeaderProps) {
           aria-label={labels.notifications}
         >
           <Bell className="size-4" aria-hidden="true" />
-          <span className="absolute -right-0.5 -top-0.5 flex size-3.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+          <span className="absolute -right-0.5 -top-0.5 flex size-3.5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
             3
           </span>
         </button>
@@ -59,7 +59,7 @@ export function AdminHeader({ labels, onToggleSidebar }: AdminHeaderProps) {
           </div>
           <div className="hidden text-right sm:block">
             <p className="text-xs font-medium text-foreground">Admin</p>
-            <p className="text-[11px] text-muted-foreground">{labels.role}</p>
+            <p className="text-xs text-muted-foreground">{labels.role}</p>
           </div>
         </div>
       </div>

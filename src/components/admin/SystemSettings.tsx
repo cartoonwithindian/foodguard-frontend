@@ -73,7 +73,7 @@ export function SystemSettings({ settings, labels }: SystemSettingsProps) {
                     {setting.label}
                   </label>
                   {setting.sensitive && (
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Sensitive — handled via secure backend
                     </p>
                   )}

@@ -33,7 +33,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
             type="button"
             onClick={() => setTheme(opt.value)}
             className={cn(
-              "inline-flex items-center justify-center rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
+              "inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
               isActive
                 ? "bg-card text-foreground shadow-sm"

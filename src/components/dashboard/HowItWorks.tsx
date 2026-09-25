@@ -29,7 +29,7 @@ export function HowItWorks({ labels }: HowItWorksProps) {
               >
                 <Icon className="size-5" aria-hidden="true" />
               </div>
-              <span className="text-[10px] font-bold tracking-[0.14em] text-primary">{step.number}</span>
+              <span className="text-xs font-bold tracking-[0.14em] text-primary">{step.number}</span>
               <p className="mt-1 text-sm font-semibold text-foreground">{step.label}</p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 {step.description}

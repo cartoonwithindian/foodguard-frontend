@@ -45,7 +45,7 @@ export function OfflineIndicator({
 
   return (
     <div
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
         offline
           ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
           : "bg-muted text-muted-foreground"

@@ -66,7 +66,7 @@ export function DataQuality({ issues, labels }: DataQualityProps) {
                 <tr key={issue.id} className="hover:bg-muted/30 transition-colors">
                   <td className="whitespace-nowrap px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-medium text-muted-foreground/60 uppercase">
+                      <span className="text-xs font-medium text-muted-foreground/60 uppercase">
                         {issue.targetType === "product" ? "PRD" : "ING"}
                       </span>
                       <span className="font-medium text-foreground">{issue.target}</span>

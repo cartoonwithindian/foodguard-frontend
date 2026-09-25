@@ -170,7 +170,7 @@ export function AnalysisLogs({ logs, labels }: AnalysisLogsProps) {
                   <div className="flex flex-col items-center">
                     <span
                       className={cn(
-                        "flex size-6 items-center justify-center rounded-full text-[10px] font-bold text-white",
+                        "flex size-6 items-center justify-center rounded-full text-xs font-bold text-white",
                         status === "success"
                           ? "bg-emerald-500"
                           : status === "failed"

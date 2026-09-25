@@ -182,11 +182,11 @@ function CheckCard({ result }: { result: RegulatoryCheckResult }) {
           <Icon className={cn("size-4 shrink-0", cfg.color)} aria-hidden="true" />
           <span className="text-sm font-medium text-foreground truncate">{result.name}</span>
           {result.type === "additive" ? (
-            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Additive
             </span>
           ) : (
-            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Contaminant
             </span>
           )}

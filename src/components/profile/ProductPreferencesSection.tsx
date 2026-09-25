@@ -114,7 +114,7 @@ export function ProductPreferencesSection({
       </div>
 
       {/* Add new */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <div className="flex gap-1.5">
           <button
             type="button"
@@ -149,7 +149,7 @@ export function ProductPreferencesSection({
             if (e.key === "Enter") handleAdd();
           }}
           placeholder={labels.addPlaceholder}
-          className="flex-1 rounded-xl border border-border bg-background px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-background px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         />
         <button
           type="button"

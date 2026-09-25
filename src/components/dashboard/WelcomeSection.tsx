@@ -92,15 +92,15 @@ export function WelcomeSection({
           <div className="mt-5 grid grid-cols-3 gap-2 border-t border-primary/10 pt-4 text-center">
             <div>
               <p className="text-lg font-semibold text-foreground">{scanCount}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">Recent scans</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Recent scans</p>
             </div>
             <div>
               <p className="text-lg font-semibold text-foreground">{healthyCount}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">Lower concern</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Lower concern</p>
             </div>
             <div>
               <p className="text-lg font-semibold text-foreground">{allergies.length}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">Allergens</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Allergens</p>
             </div>
           </div>
         </div>

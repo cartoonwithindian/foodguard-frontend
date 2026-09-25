@@ -57,7 +57,7 @@ export function NutritionSummary({ nutrition, labels }: NutritionSummaryProps) {
                   <span className={`mt-1 text-xl font-bold ${colors.text}`}>
                     {field.value}
                   </span>
-                  <span className="text-[11px] text-muted-foreground">{field.unit}</span>
+                  <span className="text-xs text-muted-foreground">{field.unit}</span>
                 </>
               ) : (
                 <span className="mt-1 text-sm text-muted-foreground italic">

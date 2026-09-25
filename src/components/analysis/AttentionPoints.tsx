@@ -70,7 +70,7 @@ export function AttentionPoints({ title, points }: AttentionPointsProps) {
                   {point.reason}
                 </p>
                 {point.source && (
-                  <p className="mt-1 text-[11px] text-muted-foreground/80">
+                  <p className="mt-1 text-xs text-muted-foreground/80">
                     Basis: {point.source}
                   </p>
                 )}

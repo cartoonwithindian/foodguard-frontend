@@ -183,7 +183,7 @@ export function ProductCatalogPage({
         <div className="mx-auto flex h-14 max-w-5xl items-center px-4">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-primary"
+            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-primary"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />
             Back
@@ -238,7 +238,7 @@ export function ProductCatalogPage({
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
                 aria-label="Sort products"
-                className="rounded-xl border border-border bg-background py-2 pl-9 pr-8 text-sm font-medium text-foreground focus:border-primary focus:outline-none"
+                className="min-h-11 rounded-xl border border-border bg-background py-2 pl-9 pr-8 text-sm font-medium text-foreground focus:border-primary focus:outline-none"
               >
                 {SORT_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -251,7 +251,7 @@ export function ProductCatalogPage({
               <button
                 type="button"
                 onClick={clearFilters}
-                className="rounded-xl border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                className="min-h-11 rounded-xl border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
                 Clear
               </button>
@@ -265,7 +265,7 @@ export function ProductCatalogPage({
             type="button"
             onClick={() => setCategory("all")}
             className={cn(
-              "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+              "shrink-0 min-h-11 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
               category === "all"
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-border bg-background text-foreground hover:bg-muted",
@@ -279,7 +279,7 @@ export function ProductCatalogPage({
               type="button"
               onClick={() => setCategory(c.key)}
               className={cn(
-                "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                "shrink-0 min-h-11 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
                 category === c.key
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-background text-foreground hover:bg-muted",

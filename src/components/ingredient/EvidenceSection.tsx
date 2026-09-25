@@ -29,7 +29,7 @@ export function EvidenceSection({ evidence, labels }: EvidenceSectionProps) {
           >
             <div className="mb-2 flex items-start justify-between gap-3">
               <p className="text-sm font-medium text-foreground">{source.sourceName}</p>
-              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                 {source.sourceType}
               </span>
             </div>

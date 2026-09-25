@@ -103,7 +103,7 @@ export function EvidenceManagement({ entries, labels }: EvidenceManagementProps)
                   <td className="whitespace-nowrap px-4 py-3">
                     <span
                       className={cn(
-                        "inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium",
+                        "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
                         SOURCE_TYPE_COLORS[entry.sourceType] ?? "bg-gray-50 text-gray-600",
                       )}
                     >

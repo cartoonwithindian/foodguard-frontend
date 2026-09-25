@@ -6,7 +6,7 @@ import type { ChatSourceRef } from "@/types/chat";
 export function SourceReferences({ sources }: { sources: ChatSourceRef[] }) {
   return (
     <div className="flex max-w-[92%] flex-col gap-1.5">
-      <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         <BookOpen className="h-3.5 w-3.5" />
         Sources
       </p>

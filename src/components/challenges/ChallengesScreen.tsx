@@ -78,14 +78,14 @@ export function ChallengesScreen() {
           <button
             type="button"
             onClick={() => router.push("/")}
-            className="flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="flex size-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label="Back to home"
           >
             <ArrowLeft className="size-5" aria-hidden="true" />
           </button>
           <Target className="size-5 text-primary" aria-hidden="true" />
           <h1 className="text-base font-semibold text-foreground">Challenges</h1>
-          <Link href="/" className="ml-auto text-xs font-semibold text-primary hover:text-primary-dark">
+          <Link href="/" className="ml-auto inline-flex min-h-11 items-center text-xs font-semibold text-primary hover:text-primary-dark">
             Back to FoodGuard
           </Link>
         </div>
@@ -110,7 +110,7 @@ export function ChallengesScreen() {
               role="tab"
               aria-selected={tab === value}
               onClick={() => setTab(value)}
-              className={`rounded-lg px-5 py-2.5 text-sm font-semibold capitalize transition-colors ${
+              className={`min-h-11 rounded-lg px-5 py-2.5 text-sm font-semibold capitalize transition-colors ${
                 tab === value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
@@ -132,7 +132,7 @@ export function ChallengesScreen() {
             <button
               type="button"
               onClick={() => void load()}
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"
+              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-3.5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"
             >
               <RefreshCw className="size-4" aria-hidden="true" />
               Try again

@@ -162,15 +162,15 @@ export function ScannerPage({ lang = "en", initialScreen = "identify" }: Scanner
                   )}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+                  <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
                     Source: {product.source}
                   </span>
                   {product.resolutionSource && (
-                    <span className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+                    <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
                       {RESOLUTION_SOURCE_LABELS[product.resolutionSource] ?? product.resolutionSource}
                     </span>
                   )}
-                  <span className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+                  <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
                     Confidence: {Math.round(product.confidence * 100)}%
                   </span>
                 </div>
@@ -337,7 +337,7 @@ export function ScannerPage({ lang = "en", initialScreen = "identify" }: Scanner
           <button
             type="button"
             onClick={goBack}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-primary"
+            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-primary"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />
             {screen !== "identify" && !loading && !resolution
@@ -349,7 +349,7 @@ export function ScannerPage({ lang = "en", initialScreen = "identify" }: Scanner
             <OfflineIndicator />
             <Link
               href="/history"
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               <History className="size-4" aria-hidden="true" />
               <span className="hidden sm:inline">{labels.header.historyButton}</span>

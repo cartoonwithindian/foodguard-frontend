@@ -47,7 +47,7 @@ export function ChatInput({ disabled, onSend }: ChatInputProps) {
           <Send className="h-5 w-5" />
         </button>
       </div>
-      <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+      <p className="mt-1.5 text-center text-xs text-muted-foreground">
         FoodGuard AI gives preliminary information and never replaces official inspection or advice.
       </p>
     </div>

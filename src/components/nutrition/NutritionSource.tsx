@@ -29,7 +29,7 @@ export function NutritionSource({ source, labels }: NutritionSourceProps) {
               <p className="mt-0.5 text-xs text-muted-foreground">Database: {source.database}</p>
             )}
           </div>
-          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
             {source.sourceType}
           </span>
         </div>

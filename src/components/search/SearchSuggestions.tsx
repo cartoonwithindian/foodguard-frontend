@@ -22,7 +22,7 @@ export function SearchSuggestions({
             key={s}
             type="button"
             onClick={() => onSelect(s)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted hover:border-primary/30"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted hover:border-primary/30"
           >
             <Lightbulb className="size-3 text-muted-foreground" aria-hidden="true" />
             {s}

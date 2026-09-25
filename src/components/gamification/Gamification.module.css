@@ -1,0 +1,374 @@
+/*
+ * Co-located styles for the FoodGuard gamification section.
+ *
+ * `src/app/globals.css` is owned by another agent, so everything this section
+ * needs that Tailwind utilities do not cover lives here: the celebration
+ * animation, an explicit 44px floor for icon-only touch targets (the root font
+ * size is 14px on desktop, so a `size-11` class lands at 38.5px), and the
+ * reduced-motion opt-out.
+ */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/*
+ * Grid/flex children default to `min-width: auto`, which lets a long
+ * achievement name or a wide number push the row past the viewport. Every
+ * grid/flex child in this section opts back in to shrinking.
+ */
+.stack > *,
+.section > *,
+.grid > * {
+  min-width: 0;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .gridThree {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Loading, error and empty states always span the full row. */
+.spanAll {
+  grid-column: 1 / -1;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+  box-shadow: var(--foodguard-shadow);
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: 1.5rem;
+  }
+}
+
+.cardHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Touch target floor. Applies at every breakpoint, including the 14px root. */
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 0.75rem;
+  color: var(--muted-foreground);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.iconButton:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.iconButton:focus-visible,
+.control:focus-visible,
+.filterTab:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.control {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.control:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.controlPrimary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.controlPrimary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.controlGhost {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.controlGhost:hover:not(:disabled) {
+  background: var(--muted);
+}
+
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+  background: var(--card);
+  padding: 0.25rem;
+}
+
+.filterTab {
+  min-height: 44px;
+  border-radius: 0.625rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.filterTab:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.filterTabActive {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.filterTabActive:hover {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.track {
+  height: 0.625rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--muted);
+}
+
+.fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--primary);
+  transition: width 400ms ease;
+}
+
+.trackLocked .fill {
+  background: var(--primary-dark);
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .statGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.stat {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.125rem;
+  border-radius: 0.875rem;
+  background: var(--secondary);
+  padding: 0.75rem 0.875rem;
+}
+
+.statValue {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.875rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+
+.bannerError {
+  border: 1px solid var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 8%, var(--card));
+  color: var(--foreground);
+}
+
+.bannerNotice {
+  border: 1px solid var(--border);
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+  border: 1px dashed var(--border);
+  border-radius: 0.875rem;
+  padding: 1.25rem;
+}
+
+.stateRow {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.skeleton {
+  height: 0.75rem;
+  border-radius: 9999px;
+  background: var(--muted);
+}
+
+.celebrationLayer {
+  position: fixed;
+  inset-inline: 0;
+  top: 0.75rem;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline: 0.75rem;
+  pointer-events: none;
+}
+
+.celebrationCard {
+  pointer-events: auto;
+  display: flex;
+  width: 100%;
+  max-width: 26rem;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border: 1px solid var(--primary);
+  border-radius: 0.875rem;
+  background: var(--card);
+  padding: 0.75rem;
+  box-shadow: 0 12px 32px rgba(16, 35, 28, 0.18);
+  animation: celebration-enter 240ms ease-out;
+}
+
+.celebrationClose {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin: -0.5rem -0.5rem -0.5rem 0;
+  border-radius: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.celebrationClose:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.celebrationClose:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (min-width: 768px) {
+  .celebrationLayer {
+    top: 1rem;
+  }
+}
+
+@keyframes celebration-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 900ms linear infinite;
+}
+
+/*
+ * Respect the OS setting for every animation this section owns. The
+ * celebration still appears -- it just does not move.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .celebrationCard {
+    animation: none;
+  }
+
+  .spin {
+    animation: none;
+  }
+
+  .fill,
+  .control,
+  .filterTab,
+  .iconButton {
+    transition: none;
+  }
+}

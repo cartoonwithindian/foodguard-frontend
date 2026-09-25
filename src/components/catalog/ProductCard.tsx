@@ -61,12 +61,12 @@ export function ProductCard({
         )}
 
         {product.category && (
-          <span className="absolute left-2 top-2 rounded-full bg-background/90 px-2 py-0.5 text-[11px] font-medium text-foreground backdrop-blur-sm">
+          <span className="absolute left-2 top-2 rounded-full bg-background/90 px-2 py-0.5 text-xs font-medium text-foreground backdrop-blur-sm">
             {product.categoryLabel}
           </span>
         )}
         {product.verified && (
-          <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+          <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
             <BadgeCheck className="size-3" aria-hidden="true" />
             Verified
           </span>
@@ -94,7 +94,7 @@ export function ProductCard({
         </div>
 
         {product.hasBarcode && (
-          <p className="inline-flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+          <p className="inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
             <Barcode className="size-3.5" aria-hidden="true" />
             {product.barcode}
           </p>
@@ -103,17 +103,17 @@ export function ProductCard({
         <div className="mt-auto flex items-center justify-between pt-2">
           <div className="flex items-center gap-1.5">
             {product.hasNutrition && (
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                 Nutrition
               </span>
             )}
             {product.hasIngredients && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                 Ingredients
               </span>
             )}
             {!product.hasNutrition && !product.hasIngredients && (
-              <span className="text-[11px] text-muted-foreground">Basic data</span>
+              <span className="text-xs text-muted-foreground">Basic data</span>
             )}
           </div>
 

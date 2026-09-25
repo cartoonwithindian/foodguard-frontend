@@ -215,11 +215,11 @@ export function ImageSelector({ products }: ImageSelectorProps) {
                 ) : (
                   <div className="flex flex-col items-center gap-1 text-muted-foreground">
                     <ImageIcon className="size-6" />
-                    <span className="text-[10px]">No image</span>
+                    <span className="text-xs">No image</span>
                   </div>
                 )}
                 {!product.imageUrl && (
-                  <div className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
+                  <div className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
                     !
                   </div>
                 )}
@@ -233,7 +233,7 @@ export function ImageSelector({ products }: ImageSelectorProps) {
                 <p className="truncate text-xs text-muted-foreground">
                   {product.brand ?? "Unknown brand"}
                 </p>
-                <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                <p className="mt-1 font-mono text-xs text-muted-foreground">
                   {product.barcode}
                 </p>
               </div>
