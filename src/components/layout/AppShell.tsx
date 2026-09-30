@@ -138,12 +138,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
-        <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-3">
-          <p className="text-xs font-semibold text-white">Make informed choices</p>
-          <p className="mt-1 text-[11px] leading-4 text-sidebar-foreground/70">
-            Scan, understand, and keep your food awareness going.
-          </p>
-        </div>
       </aside>
 
       <div className="min-h-screen lg:pl-64">{children}</div>

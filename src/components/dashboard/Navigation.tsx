@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { APP_LANGUAGES } from "@/data/languages";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/components/AuthProvider";
 import { BrandMark } from "@/components/ui/BrandMark";
 
@@ -18,15 +17,11 @@ type NavItem = {
 };
 
 type TopNavigationProps = {
-  items: NavItem[];
-  activeKey: string;
   currentLanguage?: string;
   onLanguageChange?: (langId: string) => void;
 };
 
 export function TopNavigation({
-  items,
-  activeKey,
   currentLanguage,
   onLanguageChange,
 }: TopNavigationProps) {
@@ -65,32 +60,7 @@ export function TopNavigation({
           </span>
         </Link>
 
-        <div className="hidden items-center gap-1 md:flex">
-          {items.map(({ key, label, href, Icon }) => {
-            const isActive = key === activeKey;
-            return (
-              <Link
-                key={key}
-                href={href}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-                aria-current={isActive ? "page" : undefined}
-              >
-                <Icon className="size-4" aria-hidden="true" />
-                {label}
-              </Link>
-            );
-          })}
-        </div>
-
         <div className="flex items-center gap-1">
-          <ThemeToggle />
-
           {currentLanguage && onLanguageChange && (
           <div ref={langRef} className="relative">
             <button

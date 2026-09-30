@@ -24,13 +24,13 @@ const ASSESSMENT_STYLES: Record<
   AssessmentLevel,
   { badge: string; dot: string; label: string }
 > = {
-  low: { badge: "bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400", dot: "bg-green-500", label: "Low" },
+  low: { badge: "bg-green-50 text-green-800", dot: "bg-green-600", label: "Low" },
   moderate: {
-    badge: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
-    dot: "bg-amber-500",
+    badge: "bg-amber-50 text-amber-800",
+    dot: "bg-amber-600",
     label: "Attention",
   },
-  high: { badge: "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400", dot: "bg-red-500", label: "High Attention" },
+  high: { badge: "bg-rose-50 text-rose-700", dot: "bg-rose-500", label: "High Attention" },
   insufficient: {
     badge: "bg-gray-50 text-gray-600 dark:bg-gray-900/40 dark:text-gray-400",
     dot: "bg-gray-400",

@@ -22,11 +22,9 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 function getScoreBarColor(score: number): string {
-  if (score >= 4) return "bg-[#16a36a]";
-  if (score >= 3) return "bg-[#4bbd8b]";
-  if (score >= 2) return "bg-[#e5a11a]";
-  if (score >= 1) return "bg-[#e86a3a]";
-  return "bg-[#d94a4a]";
+  if (score >= 3) return "bg-green-600";
+  if (score >= 2) return "bg-amber-500";
+  return "bg-rose-500";
 }
 
 export function FoodGuardScoreCard({ foodguardScore, confidenceLabel }: FoodGuardScoreCardProps) {
@@ -34,12 +32,12 @@ export function FoodGuardScoreCard({ foodguardScore, confidenceLabel }: FoodGuar
 
   const overallColor =
     final_score >= 4
-      ? "text-[#16a36a]"
+      ? "text-green-800"
       : final_score >= 3
-        ? "text-[#4bbd8b]"
+        ? "text-green-700"
         : final_score >= 2
-          ? "text-[#e5a11a]"
-          : "text-[#d94a4a]";
+          ? "text-amber-800"
+          : "text-rose-700";
 
   return (
     <div className="foodguard-card p-6">

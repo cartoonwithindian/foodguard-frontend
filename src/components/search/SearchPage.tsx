@@ -279,19 +279,15 @@ export function SearchPage({ lang = "en", initialQuery = "" }: SearchPageProps) 
             <ArrowLeft className="size-4" aria-hidden="true" />
             {labels.header.backButton}
           </Link>
-          <h1 className="ml-4 text-sm font-semibold text-foreground">
+          <h1 className="ml-4 text-base font-semibold text-foreground">
             {labels.header.title}
           </h1>
         </div>
       </header>
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
-        <p className="mb-5 text-center text-sm text-muted-foreground">
-          {labels.header.subtitle}
-        </p>
-
         {/* Search Input */}
-        <div className="mb-6">
+        <div className="mb-2">
           <IngredientInput
             placeholder={labels.search.placeholder}
             searchButton={labels.search.searchButton}
@@ -299,6 +295,9 @@ export function SearchPage({ lang = "en", initialQuery = "" }: SearchPageProps) 
             onSearch={doSearch}
           />
         </div>
+        <p className="mb-6 text-center text-xs leading-relaxed text-muted-foreground sm:text-sm">
+          {labels.header.subtitle}
+        </p>
 
         {/* Idle: suggestions + criteria + browse categories */}
         {phase === "idle" && showSuggestions && (

@@ -14,6 +14,10 @@ import {
 } from "@/data/history-data";
 import type { ProductCategory, AssessmentLevel } from "@/types/domain";
 import type { ProductAnalysisResult } from "@/data/analysis-data";
+import {
+  normalizeSearchQuery,
+  searchCatalogProducts,
+} from "@/lib/search/search-service";
 import { useAuth } from "@/components/AuthProvider";
 import {
   firebaseListHistory,
@@ -52,6 +56,27 @@ const CATEGORIES: ProductCategory[] = [
   "other",
 ];
 
+const catalogImageLookupCache = new Map<string, Promise<string | null>>();
+
+function findCatalogImage(item: HistoryItem): Promise<string | null> {
+  const barcode = item.barcode.trim();
+  const query = barcode || item.name;
+  const cacheKey = normalizeSearchQuery(query);
+  const cached = catalogImageLookupCache.get(cacheKey);
+  if (cached) return cached;
+
+  const lookup = searchCatalogProducts({ query, limit: 10 })
+    .then(({ products }) => {
+      const normalizedName = normalizeSearchQuery(item.name);
+      const match = products.find((product) => barcode && product.barcode.trim() === barcode)
+        ?? products.find((product) => normalizeSearchQuery(product.name) === normalizedName);
+      return match?.imageUrl ?? null;
+    })
+    .catch(() => null);
+  catalogImageLookupCache.set(cacheKey, lookup);
+  return lookup;
+}
+
 function toHistoryItem(doc: FirebaseHistoryItem): HistoryItem {
   const assessment = ASSESSMENTS.includes(doc.assessment as AssessmentLevel)
     ? (doc.assessment as AssessmentLevel)
@@ -59,6 +84,8 @@ function toHistoryItem(doc: FirebaseHistoryItem): HistoryItem {
   const category = CATEGORIES.includes(doc.category as ProductCategory)
     ? (doc.category as ProductCategory)
     : "other";
+  const analysis = doc.analysis as ProductAnalysisResult;
+  const imageUrl = doc.imageUrl || analysis.imageUrl;
   return {
     id: doc.id,
     name: doc.name,
@@ -68,7 +95,7 @@ function toHistoryItem(doc: FirebaseHistoryItem): HistoryItem {
     scannedAt: new Date(doc.scannedAt).toISOString(),
     assessment,
     score: doc.score ?? 0,
-    analysis: doc.analysis as ProductAnalysisResult,
+    analysis: { ...analysis, imageUrl },
   };
 }
 
@@ -103,6 +130,43 @@ export function HistoryPage({ lang = "en" }: { lang?: string }) {
   }, [firebaseMode, firebaseUser]);
 
   const counts = getHistoryCounts(items);
+
+  useEffect(() => {
+    const missingImages = items.filter(
+      (item) => !item.analysis.imageUrl && (item.barcode || item.name),
+    );
+    if (missingImages.length === 0) return;
+
+    let cancelled = false;
+    let nextIndex = 0;
+    const imageUpdates = new Map<string, string>();
+
+    async function lookupWorker() {
+      while (!cancelled) {
+        const item = missingImages[nextIndex++];
+        if (!item) return;
+        const imageUrl = await findCatalogImage(item);
+        if (imageUrl) imageUpdates.set(item.id, imageUrl);
+      }
+    }
+
+    async function applyCatalogImages() {
+      const workerCount = Math.min(4, missingImages.length);
+      await Promise.all(Array.from({ length: workerCount }, () => lookupWorker()));
+      if (cancelled || imageUpdates.size === 0) return;
+
+      setItems((current) => current.map((item) => {
+        const imageUrl = imageUpdates.get(item.id);
+        if (!imageUrl || item.analysis.imageUrl) return item;
+        return { ...item, analysis: { ...item.analysis, imageUrl } };
+      }));
+    }
+
+    void applyCatalogImages();
+    return () => {
+      cancelled = true;
+    };
+  }, [items]);
 
   const filteredItems = searchHistory(items, query, {
     ...filters,
@@ -180,10 +244,7 @@ export function HistoryPage({ lang = "en" }: { lang?: string }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-background pb-20 lg:pb-0">
-      <TopNavigation
-        items={NAV_ITEMS}
-        activeKey={activeNav}
-      />
+      <TopNavigation />
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <div className="space-y-6">
@@ -205,43 +266,6 @@ export function HistoryPage({ lang = "en" }: { lang?: string }) {
             onModerateClick={() => handleTabChange("moderate")}
             onLowClick={() => handleTabChange("low")}
           />
-
-          {/* Recently scanned — top 5 */}
-          {items.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-foreground">
-                {labels.recentScans.title}
-              </h2>
-              <div className="flex gap-2.5 overflow-x-auto pb-1">
-                {items.slice(0, 5).map((item) => {
-                  const concernLabel =
-                    item.assessment === "high"
-                      ? "High Concern"
-                      : item.assessment === "moderate"
-                        ? "Moderate"
-                        : "Low Concern";
-                  const formattedDate = new Date(item.scannedAt).toLocaleDateString("en-US", {
-                    day: "numeric",
-                    month: "short",
-                  });
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => handleViewAnalysis(item.id)}
-                      className="flex shrink-0 flex-col gap-1 rounded-xl border border-border bg-card p-3 text-left shadow-sm transition-all hover:border-primary/30 hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                    >
-                      <p className="text-sm font-medium text-foreground line-clamp-1">
-                        {item.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{formattedDate}</p>
-                      <span className="text-xs font-medium text-primary">{concernLabel}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           {/* Search + Filters */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

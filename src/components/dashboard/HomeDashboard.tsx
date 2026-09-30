@@ -155,8 +155,6 @@ export function HomeDashboard() {
   return (
     <div className="flex min-h-screen flex-col bg-background pb-20 lg:pb-0">
       <TopNavigation
-        items={NAV_ITEMS}
-        activeKey="home"
         currentLanguage={lang}
         onLanguageChange={handleLanguageChange}
       />
