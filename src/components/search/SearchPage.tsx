@@ -11,6 +11,7 @@ import {
   searchCatalogProducts,
   normalizeSearchQuery,
   dedupeCatalogProducts,
+  enrichCatalogImages,
 } from "@/lib/search/search-service";
 import type { CatalogProductItem } from "@/lib/store/sqlite";
 import { useNetworkQuality } from "@/lib/network/use-network";
@@ -105,12 +106,13 @@ export function SearchPage({ lang = "en", initialQuery = "" }: SearchPageProps) 
           signal: controller.signal,
         });
         if (controllerRef.current !== controller) return;
+        const enriched = await enrichCatalogImages(result.products);
         setPage(result.page);
         setHasMore(result.hasMore);
         setResults((prev) =>
           append
-            ? dedupeCatalogProducts([...prev, ...result.products])
-            : dedupeCatalogProducts(result.products),
+            ? dedupeCatalogProducts([...prev, ...enriched])
+            : dedupeCatalogProducts(enriched),
         );
         setTotal(result.total);
         if (result.categories.length > 0) setCategories(result.categories);
@@ -434,7 +436,7 @@ export function SearchPage({ lang = "en", initialQuery = "" }: SearchPageProps) 
                 searchAgainLabel={labels.empty.searchAgain}
                 tryNameLabel={labels.empty.tryName}
                 scanBarcodeLabel={labels.empty.scan}
-                onScan={() => router.push("/scan?open=camera&mode=barcode")}
+                onScan={() => router.push("/scan")}
                 categoryTitle=""
                 popularTitle=""
                 categories={[]}
@@ -537,7 +539,7 @@ export function SearchPage({ lang = "en", initialQuery = "" }: SearchPageProps) 
                 searchAgainLabel={labels.empty.searchAgain}
                 tryNameLabel={labels.empty.tryName}
                 scanBarcodeLabel={labels.empty.scan}
-                onScan={() => router.push("/scan?open=camera&mode=barcode")}
+                onScan={() => router.push("/scan")}
                 categoryTitle=""
                 popularTitle=""
                 categories={[]}

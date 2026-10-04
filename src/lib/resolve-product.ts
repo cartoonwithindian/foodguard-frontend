@@ -481,11 +481,13 @@ export async function resolveProductByPhoto(
       rawText?: string;
       ingredientsText?: string;
       productName?: string;
+      error?: { message?: string } | string | null;
     }) | null;
 
     if (!response.ok || !json?.success) {
+      const raw: unknown = json?.error;
       const message =
-        json?.error ||
+        (typeof raw === "string" ? raw : (raw && typeof raw === "object" && "message" in raw ? String((raw as { message?: unknown }).message ?? "") : "")) ||
         "We couldn't read this photo. Try a clearer, well-lit image of the packaging.";
       return { resolution: { status: "error", message, extracted }, extracted };
     }

@@ -7,9 +7,16 @@ type PageProps = {
 
 export default async function ScanRoute({ searchParams }: PageProps) {
   const { mode, open, lang } = await searchParams;
-  // Deep link from dashboard/history/nutrition: /scan?open=camera&mode=barcode
+  // Default to the identify landing showing all options (barcode, search,
+  // manual, visual, multi-product scan).
+  // Legacy deep link /scan?open=camera&mode=barcode still jumps straight to the scanner.
+  // /scan?mode=multi jumps straight to the multi-product scanner.
   const initialScreen =
-    open === "camera" && mode === "barcode" ? "barcode" : ("identify" as const);
+    mode === "multi"
+      ? ("multi_scan" as const)
+      : open === "camera" && mode === "barcode"
+        ? "barcode"
+        : ("identify" as const);
   return (
     <AuthGuard>
       <ScannerPage initialScreen={initialScreen} lang={lang} />

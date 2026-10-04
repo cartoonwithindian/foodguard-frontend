@@ -26,7 +26,6 @@ import { personalize } from "@/services/personalization.service";
 
 import type { EnhancedAlternative } from "@/services/recommendation.service";
 import { getStore } from "@/lib/store";
-import { knownBarcodeText } from "@/lib/ocr";
 import { logger } from "@/lib/logger";
 import { buildRegulatoryCompliance, regulatoryComplianceUnavailable } from "@/services/regulatory/fssai/compliance";
 import type { FSSAIAnalysisResult } from "@/services/regulatory/fssai";
@@ -332,10 +331,6 @@ export async function runAnalysis(input: AnalyzeInput): Promise<{ frontend: Fron
     const parsed = parseIngredientText(product.ingredientsRaw);
     ingredientsText = parsed.listText ?? "";
   }
-  if (!ingredientsText && input.barcode && !input.imageAvailable) {
-    const canned = knownBarcodeText(input.barcode);
-    if (canned) ingredientsText = canned;
-  }
 
   // ── 3. Parse + normalize + analyze ingredients ──
   const parsedIngredients = parseIngredientText(ingredientsText);
@@ -475,11 +470,17 @@ export async function runAnalysis(input: AnalyzeInput): Promise<{ frontend: Fron
   let webResearchPerformed = false;
 
   // Check if web research is needed and available
-  const shouldResearch = shouldPerformWebResearch(
-    ingredientAnalysis.items,
-    !!regulatoryCompliance,
-    !!productNutrition,
-  );
+  const hasUnresolvedLabelText = ingredientAnalysis.unresolvedCount > 0;
+  const shouldResearch = hasUnresolvedLabelText
+    ? {
+        needed: false,
+        reasons: ["Unresolved label text is queued for review; no ingredient evidence is guessed or researched automatically"],
+      }
+    : shouldPerformWebResearch(
+        ingredientAnalysis.items,
+        !!regulatoryCompliance,
+        !!productNutrition,
+      );
 
   if (isWebResearchAvailable() && shouldResearch.needed) {
     logger.info("web_research_triggered", {
@@ -527,6 +528,7 @@ export async function runAnalysis(input: AnalyzeInput): Promise<{ frontend: Fron
       available: isWebResearchAvailable(),
       needed: shouldResearch.needed,
       reasons: shouldResearch.reasons,
+      unresolvedLabelText: hasUnresolvedLabelText,
     });
   }
 

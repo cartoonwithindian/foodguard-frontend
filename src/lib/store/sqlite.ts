@@ -22,17 +22,9 @@ import { logger } from "@/lib/logger";
 import { normalizeNutritionFacts } from "@/lib/nutrition/units";
 
 /**
- * Read/write store backed by the bundled FoodGuard SQLite database
- * (data/foodguard/foodguard.db) which ships ~29.5k Indian retail products
- * extracted by the FoodGuard data pipeline (see the foodguard_final.zip
- * bundle). Selected when `FOODGUARD_DB_PATH` points to an existing file and no
- * DATABASE_URL is set (local/mock deployments); otherwise the app keeps its
- * existing behaviour (InMemoryStore or PrismaStore).
- *
- * Product data lives in SQLite; every non-product concern (users, history,
- * ingredients knowledge base, unknown-ingredient queue, admin audit log) stays
- * in the in-memory store exactly as in MOCK MODE, and product lookups that miss
- * the SQLite file fall back to the in-memory demo seed so nothing breaks.
+ * Read/write store backed by the bundled FoodGuard SQLite database.
+ * Product data lives in SQLite; product lookups that miss the SQLite file
+ * return not-found and are resolved by configured external providers.
  */
 
 const DEFAULT_DB_PATH = join(process.cwd(), "data", "foodguard", "foodguard.db");
@@ -416,7 +408,7 @@ export class SqliteStore extends InMemoryStore implements DataStore {
   private db: DatabaseSync | null = null;
 
   constructor(private readonly dbPath = SQLITE_DB_PATH) {
-    super();
+    super(false);
   }
 
   private ensureOpen(): DatabaseSync {
@@ -530,13 +522,13 @@ export class SqliteStore extends InMemoryStore implements DataStore {
   async getProductByBarcode(barcode: string): Promise<ProductInfo | null> {
     const hit = this.getProductRow(barcode.trim());
     if (hit) return this.toProductInfo(hit.row, hit.barcode);
-    return super.getProductByBarcode(barcode);
+    return null;
   }
 
   async getProductById(id: string): Promise<ProductInfo | null> {
     const row = this.productByIdRow(id);
     if (row) return this.toProductInfo(row);
-    return super.getProductById(id);
+    return null;
   }
 
   async getNutritionForProduct(productId: string): Promise<NutritionFacts | null> {
@@ -553,7 +545,7 @@ export class SqliteStore extends InMemoryStore implements DataStore {
       // nutrition cascade (USDA -> API Ninjas) when parsing yields nothing.
       return null;
     }
-    return super.getNutritionForProduct(productId);
+    return null;
   }
 
   async saveProductFromProvider(lookup: ProductLookupResult): Promise<ProductLookupResult> {
@@ -567,15 +559,6 @@ export class SqliteStore extends InMemoryStore implements DataStore {
         source: lookup.source,
       };
     }
-    const inMemory = await super.getProductByBarcode(barcode);
-    if (inMemory) {
-      return {
-        product: inMemory,
-        nutrition: await super.getNutritionForProduct(inMemory.id),
-        source: lookup.source,
-      };
-    }
-
     const db = this.ensureOpen();
     const id = `FG_${randomBytes(4).toString("hex").toUpperCase()}`;
     const now = new Date().toISOString();

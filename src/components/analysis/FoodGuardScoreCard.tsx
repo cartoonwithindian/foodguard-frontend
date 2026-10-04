@@ -29,6 +29,14 @@ function getScoreBarColor(score: number): string {
   return "bg-red-400";
 }
 
+// The ingredient_concern component is scored INVERTED: higher = fewer concerns.
+// Print a risk label instead of "5.0 / 5", which reads as "5 of 5 ingredients are concerning".
+function concernRisk(score: number): { label: string; color: string } {
+  if (score >= 4.5) return { label: "Low risk", color: "text-green-600 dark:text-green-400" };
+  if (score >= 3) return { label: "Moderate risk", color: "text-amber-600 dark:text-amber-400" };
+  return { label: "High risk", color: "text-red-600 dark:text-red-400" };
+}
+
 export function FoodGuardScoreCard({ foodguardScore, confidenceLabel }: FoodGuardScoreCardProps) {
   const { final_score, rating, confidence, components, positive_factors, negative_factors, explanation } = foodguardScore;
 
@@ -84,10 +92,18 @@ export function FoodGuardScoreCard({ foodguardScore, confidenceLabel }: FoodGuar
                   <span className={`text-xs font-medium ${STATUS_COLORS[comp.status] ?? ""}`}>
                     {comp.status}
                   </span>
-                  <span className="text-sm font-semibold text-foreground">
-                    {comp.score.toFixed(1)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">/ 5</span>
+                  {key === "ingredient_concern" ? (
+                    <span className={`text-sm font-semibold ${concernRisk(comp.score).color}`}>
+                      {concernRisk(comp.score).label}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-sm font-semibold text-foreground">
+                        {comp.score.toFixed(1)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">/ 5</span>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">

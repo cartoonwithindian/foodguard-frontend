@@ -86,12 +86,14 @@ export class InMemoryStore implements DataStore {
   private knowledgeChunks: KnowledgeChunkRecord[] = [];
   private counter = 0;
 
-  constructor() {
-    this.products = PRODUCT_SEED.map(toProductInfo);
-    for (const p of this.products) {
-      const seed = PRODUCT_SEED.find((s) => s.barcode === p.barcode);
-      if (seed?.nutrition) {
-        this.nutritionByProduct.set(p.id, buildNutrition(seed.nutrition)!);
+  constructor(loadFixtures = true) {
+    this.products = loadFixtures ? PRODUCT_SEED.map(toProductInfo) : [];
+    if (loadFixtures) {
+      for (const p of this.products) {
+        const seed = PRODUCT_SEED.find((s) => s.barcode === p.barcode);
+        if (seed?.nutrition) {
+          this.nutritionByProduct.set(p.id, buildNutrition(seed.nutrition)!);
+        }
       }
     }
     this.ingredients = new Map(INGREDIENT_SEED.map((i) => [i.id, i]));

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Home, Search, Clock, User, Database } from "lucide-react";
+import { Home, Search, Clock, User, Database, Barcode } from "lucide-react";
 
 import { DEFAULT_LANGUAGE_ID } from "@/data/languages";
 import { getDashboardLabels } from "@/data/dashboard-labels";
@@ -36,6 +36,7 @@ const NAV_ITEMS = [
   { key: "home", label: "Home", href: "/", Icon: Home },
   { key: "search", label: "Search", href: "/search", Icon: Search },
   { key: "history", label: "History", href: "/history", Icon: Clock },
+  { key: "benchmark", label: "Benchmark", href: "/benchmark", Icon: Barcode },
   { key: "data", label: "Data", href: "/data", Icon: Database },
   { key: "profile", label: "Profile", href: "/profile", Icon: User },
 ];
@@ -152,7 +153,7 @@ export function HomeDashboard() {
   const hasScans = recentScans.length > 0;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background pb-20 lg:pb-0">
+    <div className="flex min-h-screen flex-col bg-background pb-nav-safe lg:pb-0">
       <TopNavigation
         items={NAV_ITEMS}
         activeKey="home"
@@ -170,7 +171,7 @@ export function HomeDashboard() {
             />
             <ScanHeroCard
               labels={labels.scan}
-              onScan={() => router.push("/scan?open=camera&mode=barcode")}
+              onScan={() => router.push("/scan")}
             />
           </section>
 
@@ -192,7 +193,7 @@ export function HomeDashboard() {
                 labels={labels.recentScans}
                 scans={recentScans}
                 onViewAll={() => router.push("/history")}
-                onScan={() => router.push("/scan?open=camera&mode=barcode")}
+                onScan={() => router.push("/scan")}
                 hasScans={hasScans}
               />
             </div>

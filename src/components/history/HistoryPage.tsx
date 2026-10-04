@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Home, ScanLine, Search, Clock, User } from "lucide-react";
+import { Home, ScanLine, Search, Clock, User, Barcode } from "lucide-react";
 import { getHistoryLabels } from "@/data/history-labels";
 import { getAnalysisLabels } from "@/data/analysis-labels";
 import {
@@ -37,9 +37,10 @@ type TabLevel = "all" | "high" | "moderate" | "low";
 
 const NAV_ITEMS = [
   { key: "home", label: "Home", href: "/", Icon: Home },
-  { key: "scan", label: "Scan", href: "/scan?open=camera&mode=barcode", Icon: ScanLine },
+  { key: "scan", label: "Scan", href: "/scan", Icon: ScanLine },
   { key: "search", label: "Search", href: "/search", Icon: Search },
   { key: "history", label: "History", href: "/history", Icon: Clock },
+  { key: "benchmark", label: "Benchmark", href: "/benchmark", Icon: Barcode },
   { key: "profile", label: "Profile", href: "/profile", Icon: User },
 ];
 
@@ -113,7 +114,7 @@ export function HistoryPage({ lang = "en" }: { lang?: string }) {
     (key: string) => {
       setActiveNav(key);
       if (key === "home") router.push("/");
-      else if (key === "scan") router.push("/scan?open=camera&mode=barcode");
+      else if (key === "scan") router.push("/scan");
       else if (key === "search") router.push("/search");
       else if (key === "profile") router.push("/profile");
     },
@@ -179,7 +180,7 @@ export function HistoryPage({ lang = "en" }: { lang?: string }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background pb-20 lg:pb-0">
+    <div className="flex min-h-screen flex-col bg-background pb-nav-safe lg:pb-0">
       <TopNavigation
         items={NAV_ITEMS}
         activeKey={activeNav}

@@ -15,6 +15,14 @@
   --destructive-foreground: #ffffff;
   --accent: #f0fdf4;
   --accent-foreground: #166534;
+
+  /* Safe-area insets reported by the edge-to-edge WebView (viewport-fit=cover). */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  /* Height of the fixed bottom nav bar (excludes the gesture inset). */
+  --bottom-nav-height: 3.5rem; /* 56px */
 }
 
 .dark {
@@ -57,6 +65,76 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/*
+ * Safe-area support for the edge-to-edge WebView host.
+ *
+ * The native Android layer ALREADY pads the WebView's top by the status-bar
+ * inset (WindowInsets on the WebView), so we do NOT add top safe-area padding
+ * here — that would double it. viewport-fit=cover (layout.tsx) makes the
+ * browser report the real gesture/navigation insets, so the bottom nav and
+ * page content can clear the Android gesture bar correctly.
+ *
+ * --bottom-nav-height matches the fixed bottom nav's own bar height; page
+ * content must clear the bar plus the gesture inset, hence pb-nav-safe.
+ *
+ * (The --safe-area-* and --bottom-nav-height variable declarations live in the
+ * top-level :root block above.)
+ */
+
+/*
+ * Minimal fixed-viewport guard: block horizontal scrolling from any element
+ * that overflows, but leave overflow inside cards (rounded gutters,
+ * progress bars) untouched by scoping only to the root.
+ */
+html,
+body {
+  overflow-x: clip;
+}
+
+/*
+ * Universal fit guard: media and tables render at their intrinsic width by
+ * default, which pushes the analysis/product pages off a phone-sized
+ * viewport. Constrain them (and preserve aspect ratio) so nothing can ever be
+ * wider than the WebView.
+ */
+img,
+video,
+canvas,
+iframe,
+picture,
+table {
+  max-width: 100%;
+}
+
+img,
+video {
+  height: auto;
+}
+
+/* Reusable bottom-safe-area helpers (avoid duplicated padding across pages). */
+@utility pb-nav-safe {
+  padding-bottom: calc(
+    var(--bottom-nav-height) + var(--safe-area-bottom)
+  );
+}
+@utility pb-safe-bottom {
+  padding-bottom: var(--safe-area-bottom);
+}
+@utility pt-safe-top {
+  padding-top: var(--safe-area-top);
+}
+@utility pl-safe-left {
+  padding-left: var(--safe-area-left);
+}
+@utility pr-safe-right {
+  padding-right: var(--safe-area-right);
+}
+
+/* Bottom navigation: fixed bar + its own gesture-area cushion. */
+@utility fixed-bottom-safe {
+  padding-bottom: var(--safe-area-bottom);
 }
 
 @keyframes scan-line {

@@ -15,23 +15,21 @@ function sqlitePath(): string {
  * Returns the active data store.
  *  - PRODUCTION (DATABASE_URL set): PostgreSQL via Prisma
  *  - SQLite (FOODGUARD_DB_PATH set, file exists): bundled FoodGuard SQLite DB
- *    (~29.5k Indian retail products) with in-memory fallback for the rest
- *  - MOCK MODE (neither): seeded in-memory store
+ *  - In-memory fixtures are available only to tests.
  */
 export function getStore(): DataStore {
   if (instance) return instance;
   const path = sqlitePath();
-  if (isMockMode() && path && hasSqliteDatabase(path)) {
+  if (!config.databaseUrl && path && hasSqliteDatabase(path)) {
     logger.info("sqlite_store_active", { path });
     instance = new SqliteStore(path);
-  } else if (isMockMode()) {
-    logger.info("mock_mode_in_memory_store", { reason: "DATABASE_URL and FOODGUARD_DB_PATH not set" });
+  } else if (process.env.NODE_ENV === "test") {
+    logger.info("test_fixture_store_active");
     instance = new InMemoryStore();
   } else {
-    // Lazy-load PrismaStore to avoid schema validation when using SQLite/mock mode
-    
-    const mod = require("./prisma") as { PrismaStore: new () => DataStore };
-    instance = new mod.PrismaStore();
+    throw new Error(
+      "Product database is not configured. Set DATABASE_URL or FOODGUARD_DB_PATH to a real local database.",
+    );
   }
   return instance;
 }

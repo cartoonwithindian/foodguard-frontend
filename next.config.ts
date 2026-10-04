@@ -23,6 +23,20 @@ const nextConfig: NextConfig = {
   // dev origin on this VM (the cloud VM's private IP changes across
   // sessions, so the wildcard pattern keeps the phone/LAN access working).
   allowedDevOrigins: ["*.cloudshell.dev", "**.*.*"],
+  // Proxy /benchmark/* to the barcode-benchmark Angular app on port 4200
+  // Proxy /api/* to the Hono backend on port 3001
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "http://127.0.0.1:3001/api/:path*",
+      },
+      {
+        source: "/benchmark/:path*",
+        destination: "http://127.0.0.1:4200/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

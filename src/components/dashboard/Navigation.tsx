@@ -216,7 +216,7 @@ export function BottomNavigation({
 }) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card/95 backdrop-blur-sm lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-black/20 bg-black text-white backdrop-blur-sm fixed-bottom-safe lg:hidden"
       aria-label="Main navigation"
     >
       <div className="mx-auto flex max-w-md items-center justify-around px-2 py-1.5">
@@ -231,7 +231,7 @@ export function BottomNavigation({
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 isActive
                   ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground",
+                  : "text-white/60 hover:text-white",
               )}
               aria-current={isActive ? "page" : undefined}
             >

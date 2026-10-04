@@ -17,6 +17,49 @@ export const AIExplanationSchema = z.object({
 
 export type AIExplanation = z.infer<typeof AIExplanationSchema>;
 
+// ── Structured Food Understanding (multi-product scanner, Phase 4) ──
+// Descriptive ONLY: what is in the product, grounded in supplied data.
+// Never health judgments, never personalization, never invented values.
+
+export const FoodProfileUnderstandingSchema = z.object({
+  ingredientInsights: z.array(z.object({
+    type: z.string(),
+    label: z.string(),
+    /** Raw ingredient fragment this observation is grounded in. */
+    evidence: z.string(),
+  })).max(10).default([]),
+  nutritionInsights: z.array(z.object({
+    type: z.string(),
+    label: z.string(),
+    value: z.number().optional(),
+    unit: z.string().optional(),
+    evidence: z.string().default(""),
+  })).max(10).default([]),
+  /** Data-quality flags only (e.g. "nutrition_unavailable"). */
+  flags: z.array(z.string()).max(10).default([]),
+  /** Aspects with no source data (e.g. "sugar"). */
+  unavailable: z.array(z.string()).max(10).default([]),
+});
+
+export type FoodProfileUnderstanding = z.infer<typeof FoodProfileUnderstandingSchema>;
+
+export type FoodProfileUnderstandingInput = {
+  product: {
+    name: string;
+    brand?: string | null;
+  };
+  servingSize: string | null;
+  /** "PER_100G" | "PER_SERVING" | null — basis of the values below. */
+  basis: string | null;
+  /** ONLY nutrients present in trusted product data. */
+  nutrition: Array<{ key: string; value: number; unit: string }>;
+  /** Nutrient keys with no source data. */
+  missingNutrition: string[];
+  /** Normalized ingredient names (may be empty). */
+  ingredients: string[];
+  hasIngredients: boolean;
+};
+
 // ── Structured Analysis Explanation ─────────────────────────
 
 export const AIAnalysisExplanationSchema = z.object({
@@ -88,7 +131,73 @@ export type AnalysisExplanationInput = {
 export interface AIProvider {
   explainIngredient(params: ExplainIngredientParams): Promise<AIExplanation>;
   explainAnalysis?(params: AnalysisExplanationInput): Promise<AIAnalysisExplanation>;
+  /**
+   * Descriptive food understanding for a structured product profile.
+   * Optional so existing providers stay compatible. Grounded strictly in
+   * the supplied data: interprets available values, reports the rest as
+   * unavailable, never invents nutrition or ingredients.
+   */
+  explainFoodProfile?(params: FoodProfileUnderstandingInput): Promise<FoodProfileUnderstanding>;
+  /**
+   * Phase 5 JEV — interprets ALREADY-COMPUTED deterministic evidence.
+   *
+   * The strictest method on this interface. It receives the decision layer's
+   * calculated numbers and may only phrase them. It cannot recompute a
+   * percentage, cannot change the fit band, cannot lift a hard-constraint
+   * violation, and must not emit health claims or a 0-100 score.
+   * Optional so existing providers stay compatible.
+   */
+  interpretPersonalDecision?(params: PersonalDecisionInput): Promise<PersonalDecisionInterpretation>;
 }
+
+/**
+ * Phase 5 input for the interpretation layer. Structurally mirrored from
+ * `lib/personalization/jev-contract` so `ai.ts` keeps no dependency on the
+ * personalization layer; the server route maps one into the other.
+ */
+export const PersonalDecisionInterpretationSchema = z.object({
+  explanation: z.string().min(1).max(600),
+  priorityFactors: z.array(z.string().max(120)).max(6).default([]),
+  evidence: z.array(z.string().max(160)).max(8).default([]),
+  uncertainties: z.array(z.string().max(160)).max(6).default([]),
+});
+
+export type PersonalDecisionInterpretation = z.infer<
+  typeof PersonalDecisionInterpretationSchema
+>;
+
+export type PersonalDecisionInput = {
+  product: {
+    name: string;
+    ingredients: string[];
+    servingSize: string | null;
+    nutritionBasis: string | null;
+  };
+  userContext: {
+    goals: string[];
+    dietaryPreferences: string[];
+    today: { available: boolean; itemsLogged: number; date: string | null };
+  };
+  deterministicAnalysis: {
+    fit: "HIGH" | "MEDIUM" | "LOW" | "CONFLICT" | "UNKNOWN";
+    impacts: Array<{
+      key: string;
+      label: string;
+      unit: string;
+      productAmount: number | null;
+      consumedBefore: number | null;
+      target: number | null;
+      remainingBefore: number | null;
+      remainingAfter: number | null;
+      shareOfRemaining: number | null;
+      unavailableReason: string | null;
+    }>;
+    hardConstraintViolation: boolean;
+    hardConstraintReasons: string[];
+    deterministicReasons: string[];
+    uncertainties: string[];
+  };
+};
 
 export type ExplainIngredientParams = {
   name: string;
@@ -201,6 +310,126 @@ function buildAnalysisPrompt(params: AnalysisExplanationInput): string {
   ].join("\n");
 }
 
+/** Display names for nutrient keys in food-understanding output. */
+const FOOD_PROFILE_NUTRIENT_LABELS: Record<string, string> = {
+  calories: "Calories",
+  carbohydrates: "Carbohydrates",
+  sugars: "Sugar",
+  addedSugars: "Added sugar",
+  protein: "Protein",
+  totalFat: "Fat",
+  saturatedFat: "Saturated fat",
+  fiber: "Fiber",
+  sodium: "Sodium",
+};
+
+function buildFoodProfilePrompt(params: FoodProfileUnderstandingInput): string {
+  const nutritionBlock = params.nutrition.length > 0
+    ? params.nutrition.map((n) => `- ${n.key}: ${n.value}${n.unit}`).join("\n")
+    : "No nutrition values available.";
+  const missingBlock = params.missingNutrition.length > 0
+    ? params.missingNutrition.join(", ")
+    : "None — all listed nutrients are available.";
+  const ingredientBlock = params.hasIngredients && params.ingredients.length > 0
+    ? params.ingredients.join(", ")
+    : "No ingredient list available.";
+
+  return [
+    "You are an evidence-grounded food information assistant.",
+    "Describe ONLY what the supplied product data shows. Strict rules:",
+    "- NEVER invent, estimate, or round nutrition values — restate supplied values exactly.",
+    "- For any nutrient marked unavailable, say it is unavailable. Never guess (no 'probably around').",
+    "- NEVER invent ingredients. Only reference supplied ingredient names as evidence.",
+    "- NEVER judge healthiness: no healthy/unhealthy/safe/unsafe/good/bad, no recommendations,",
+    "  no personal advice. Pure description of what is in the product.",
+    "- Every insight must carry evidence: the ingredient name or 'product nutrition data'.",
+    "- If data is missing, put the aspect in 'unavailable' and note it plainly.",
+    "",
+    `Product: ${params.product.name}`,
+    `Brand: ${params.product.brand ?? "Unknown"}`,
+    `Serving: ${params.servingSize ?? "Not available"} (basis: ${params.basis ?? "unknown"})`,
+    "",
+    "Nutrition (trusted product data):",
+    nutritionBlock,
+    "",
+    `Unavailable nutrients: ${missingBlock}`,
+    "",
+    `Ingredients: ${ingredientBlock}`,
+    "",
+    'Return JSON matching: {"ingredientInsights": [{"type": string, "label": string, "evidence": string}], "nutritionInsights": [{"type": string, "label": string, "value": number, "unit": string, "evidence": string}], "flags": string[], "unavailable": string[]}',
+  ].join("\n");
+}
+
+/**
+ * Phase 5 JEV prompt.
+ *
+ * The prompt is written to make the layer's powers impossible to overstate:
+ * every number is pre-computed and passed in, the hard-constraint block is
+ * phrased as immutable, and the prohibited outputs are listed explicitly.
+ * Enforced afterwards by `containsBannedClaim` + schema validation, so a
+ * compliant-sounding prompt is a convenience, not the safety mechanism.
+ */
+function buildPersonalDecisionPrompt(params: PersonalDecisionInput): string {
+  const a = params.deterministicAnalysis;
+  const impacts = a.impacts
+    .map((i) => {
+      const bits = [
+        `- ${i.label}:`,
+        i.productAmount !== null ? `product ${i.productAmount}${i.unit}/serving` : "product not available",
+        i.consumedBefore !== null ? `consumed today ${i.consumedBefore}${i.unit}` : "today's intake unavailable",
+        i.target !== null ? `daily target ${i.target}${i.unit}` : "no daily target",
+        i.remainingBefore !== null ? `remaining before ${i.remainingBefore}${i.unit}` : null,
+        i.remainingAfter !== null ? `remaining after ${i.remainingAfter}${i.unit}` : null,
+        i.shareOfRemaining !== null
+          ? `share of remaining budget ${Math.round(i.shareOfRemaining * 100)}%`
+          : null,
+      ].filter(Boolean);
+      return bits.join(" · ");
+    })
+    .join("\n");
+
+  return [
+    "You are the interpretation layer of FoodGuard, a food-scanning app.",
+    "You receive evidence that has ALREADY been computed deterministically.",
+    "Your only job is to phrase it so a person understands it.",
+    "",
+    "ABSOLUTE RULES (violating these makes the output discarded):",
+    "- Do NOT do any arithmetic. Every number you need is already given.",
+    "- Do NOT recompute, round differently, or re-derive any percentage or total.",
+    "- Do NOT invent nutrition, ingredients, portions, or health information.",
+    "- Do NOT override or soften a hard-constraint violation. It is already final.",
+    "- Do NOT use the words healthy, unhealthy, good for you, bad for you.",
+    "- Do NOT give recommendations, prescriptions, or 'you should' advice.",
+    "- Do NOT produce a score, rating, or anything out of 100.",
+    "- Do NOT mention any user identifier, account, or personal detail.",
+    "- If data is unavailable, say it is unavailable. Never guess.",
+    "",
+    `PRODUCT: ${params.product.name}`,
+    `Serving: ${params.product.servingSize ?? "not available"} (${params.product.nutritionBasis ?? "basis unknown"})`,
+    `Ingredients: ${params.product.ingredients.join(", ") || "not available"}`,
+    "",
+    `USER GOALS (only what the user selected): ${params.userContext.goals.join(", ") || "none set"}`,
+    `DIETARY PREFERENCES: ${params.userContext.dietaryPreferences.join(", ") || "none set"}`,
+    `TODAY: ${params.userContext.today.available ? `${params.userContext.today.itemsLogged} item(s) logged on ${params.userContext.today.date}` : "no food log available"}`,
+    "",
+    `DETERMINISTIC FIT (already decided, do not change): ${a.fit}`,
+    "",
+    "COMPUTED IMPACTS:",
+    impacts || "- none comparable",
+    "",
+    a.hardConstraintViolation
+      ? `HARD CONSTRAINT VIOLATION — FINAL, NOT NEGOTIABLE:\n${a.hardConstraintReasons.map((r) => `- ${r}`).join("\n")}\nYou must acknowledge this. You may not soften it.`
+      : "HARD CONSTRAINTS: none violated.",
+    "",
+    `DETERMINISTIC REASONS: ${a.deterministicReasons.join(" | ") || "none"}`,
+    `KNOWN UNCERTAINTIES: ${a.uncertainties.join(" | ") || "none"}`,
+    "",
+    'Return JSON: {"explanation": string, "priorityFactors": string[], "evidence": string[], "uncertainties": string[]}',
+    "explanation: 1-3 sentences, contextual (e.g. 'Uses most of your remaining sugar target today').",
+    "evidence: short factual statements, each restating a value given above.",
+  ].join("\n");
+}
+
 class MockAIProvider implements AIProvider {
   async explainIngredient(params: ExplainIngredientParams): Promise<AIExplanation> {
     const explanation = this.template(params);
@@ -209,6 +438,122 @@ class MockAIProvider implements AIProvider {
 
   async explainAnalysis(params: AnalysisExplanationInput): Promise<AIAnalysisExplanation> {
     return this.buildAnalysisExplanation(params);
+  }
+
+  /**
+   * Deterministic, evidence-bound food understanding (no LLM): restates
+   * supplied nutrition values and flags observable ingredient signals.
+   * Descriptive only — never health judgments.
+   */
+  async explainFoodProfile(params: FoodProfileUnderstandingInput): Promise<FoodProfileUnderstanding> {
+    const ingredientInsights: FoodProfileUnderstanding["ingredientInsights"] = [];
+    const nutritionInsights: FoodProfileUnderstanding["nutritionInsights"] = [];
+    const flags: string[] = [];
+    const unavailable: string[] = [...params.missingNutrition];
+
+    const basisSuffix =
+      params.basis === "PER_100G" ? "per 100g" : params.basis === "PER_SERVING" ? "per serving" : "";
+
+    const ADDED_SUGAR_SIGNALS = [
+      "sugar", "glucose", "fructose", "sucrose", "syrup", "honey",
+      "jaggery", "malt", "dextrose", "molasses",
+    ];
+    for (const ingredient of params.ingredients) {
+      const lower = ingredient.toLowerCase();
+      if (ADDED_SUGAR_SIGNALS.some((s) => lower.includes(s))) {
+        ingredientInsights.push({
+          type: "added_sugar",
+          label: "Contains added sugar",
+          evidence: ingredient,
+        });
+        break;
+      }
+    }
+    const saltHit = params.ingredients.find((i) => i.toLowerCase().includes("salt"));
+    if (saltHit) {
+      ingredientInsights.push({ type: "salt", label: "Contains salt", evidence: saltHit });
+    }
+
+    for (const n of params.nutrition) {
+      const display = FOOD_PROFILE_NUTRIENT_LABELS[n.key] ?? n.key;
+      const label = basisSuffix
+        ? `${display} is ${n.value}${n.unit} ${basisSuffix}`
+        : `${display} is ${n.value}${n.unit}`;
+      nutritionInsights.push({
+        type: n.key,
+        label: label.charAt(0).toUpperCase() + label.slice(1),
+        value: n.value,
+        unit: n.unit,
+        evidence: "product nutrition data",
+      });
+    }
+
+    if (!params.hasIngredients) {
+      flags.push("ingredients_unavailable");
+      unavailable.push("ingredients");
+    }
+    if (params.nutrition.length === 0) flags.push("nutrition_unavailable");
+
+    return { ingredientInsights, nutritionInsights, flags, unavailable };
+  }
+
+  /**
+   * Phase 5 JEV mock — a deterministic rule-based interpretation built ONLY
+   * from the pre-computed impacts. It performs no arithmetic of its own: it
+   * restates `shareOfRemaining` and the deterministic reasons. This is the
+   * same text the decision engine falls back to, which keeps the no-API-key
+   * experience honest rather than a degraded imitation.
+   */
+  async interpretPersonalDecision(
+    params: PersonalDecisionInput,
+  ): Promise<PersonalDecisionInterpretation> {
+    const a = params.deterministicAnalysis;
+    const evidence: string[] = [];
+    const priorityFactors: string[] = [];
+
+    if (a.hardConstraintViolation) {
+      for (const reason of a.hardConstraintReasons.slice(0, 3)) {
+        priorityFactors.push(reason);
+        evidence.push(reason);
+      }
+      return {
+        explanation: `This product conflicts with a restriction you have stored: ${a.hardConstraintReasons[0] ?? "an ingredient you avoid"}. That check is based on the ingredient list, not an estimate.`,
+        priorityFactors,
+        evidence,
+        uncertainties: a.uncertainties.slice(0, 3),
+      };
+    }
+
+    for (const reason of a.deterministicReasons.slice(0, 3)) priorityFactors.push(reason);
+
+    for (const i of a.impacts) {
+      if (i.shareOfRemaining === null) continue;
+      const pct = Math.round(i.shareOfRemaining * 100);
+      if (pct <= 0) continue;
+      evidence.push(
+        `${i.label}: ${i.productAmount}${i.unit} per serving, ${i.consumedBefore ?? 0}${i.unit} consumed today, ${i.target ?? "—"}${i.unit} target`,
+      );
+      if (pct >= 20) {
+        priorityFactors.push(
+          `Uses ${pct}% of your remaining ${i.label.toLowerCase()} today.`,
+        );
+      }
+    }
+
+    const todayNote = params.userContext.today.available
+      ? "today's logged intake"
+      : "today's food context, which is unavailable";
+
+    const explanation = a.deterministicReasons.length
+      ? `${a.deterministicReasons[0]} Measured against ${todayNote}.`
+      : `Not enough comparable data to place this product in your day. Measured against ${todayNote}.`;
+
+    return {
+      explanation,
+      priorityFactors: priorityFactors.slice(0, 6),
+      evidence: evidence.slice(0, 8),
+      uncertainties: a.uncertainties.slice(0, 4),
+    };
   }
 
   private buildAnalysisExplanation(params: AnalysisExplanationInput): AIAnalysisExplanation {
@@ -450,15 +795,68 @@ class OpenAICompatibleProvider implements AIProvider {
     }
     return result.data;
   }
+
+  async explainFoodProfile(params: FoodProfileUnderstandingInput): Promise<FoodProfileUnderstanding> {
+    const prompt = buildFoodProfilePrompt(params);
+    const content = await this.callLLM([{ role: "user", content: prompt }], 0.1);
+
+    let parsed: unknown;
+    try {
+      parsed = this.extractJSON(content);
+    } catch {
+      logger.warn("ai_food_profile_parse_failed", { content: content.slice(0, 200) });
+      throw new AppError(ErrorCodes.AI_PROVIDER_ERROR, "AI provider returned invalid JSON for food understanding");
+    }
+
+    const result = FoodProfileUnderstandingSchema.safeParse(parsed);
+    if (!result.success) {
+      logger.warn("ai_food_profile_validation_failed", { issues: result.error.issues });
+      throw new AppError(ErrorCodes.AI_PROVIDER_ERROR, "AI provider returned invalid JSON for food understanding");
+    }
+    return result.data;
+  }
+
+  async interpretPersonalDecision(
+    params: PersonalDecisionInput,
+  ): Promise<PersonalDecisionInterpretation> {
+    const prompt = buildPersonalDecisionPrompt(params);
+    const content = await this.callLLM([{ role: "user", content: prompt }], 0.1);
+
+    let parsed: unknown;
+    try {
+      parsed = this.extractJSON(content);
+    } catch {
+      logger.warn("ai_personal_decision_parse_failed", { content: content.slice(0, 200) });
+      throw new AppError(ErrorCodes.AI_PROVIDER_ERROR, "AI provider returned invalid JSON for personal decision");
+    }
+
+    const result = PersonalDecisionInterpretationSchema.safeParse(parsed);
+    if (!result.success) {
+      logger.warn("ai_personal_decision_validation_failed", { issues: result.error.issues });
+      throw new AppError(ErrorCodes.AI_PROVIDER_ERROR, "AI provider returned invalid JSON for personal decision");
+    }
+    return result.data;
+  }
 }
 
 let instance: AIProvider | null = null;
 
 export function getAIProvider(): AIProvider {
   if (!instance) {
-    // Use real provider when API key is configured (supports openai, gemini, etc.)
-    const useRealProvider = config.ai.apiKey && config.ai.provider !== "mock";
-    instance = useRealProvider ? new OpenAICompatibleProvider() : new MockAIProvider();
+    const testDefaultMock = process.env.NODE_ENV === "test" && !config.ai.provider;
+    const explicitMock = config.ai.provider === "mock";
+
+    if (testDefaultMock || explicitMock) {
+      instance = new MockAIProvider();
+    } else if (!config.ai.provider || !config.ai.apiKey) {
+      throw new AppError(
+        ErrorCodes.AI_PROVIDER_ERROR,
+        "AI provider is not configured. Set AI_PROVIDER and AI_API_KEY.",
+        500,
+      );
+    } else {
+      instance = new OpenAICompatibleProvider();
+    }
   }
   return instance;
 }

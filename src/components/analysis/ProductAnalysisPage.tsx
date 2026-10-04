@@ -160,7 +160,7 @@ export function ProductAnalysisPage({
 
   if (phase === "loading") {
     return (
-      <div className="flex min-h-dvh flex-col bg-background">
+      <div className="flex min-h-dvh flex-col overflow-x-hidden bg-background">
         <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="mx-auto flex h-14 max-w-5xl items-center px-4">
             <Link
@@ -185,7 +185,7 @@ export function ProductAnalysisPage({
 
   if (phase === "error" || !product) {
     return (
-      <div className="flex min-h-dvh flex-col bg-background">
+      <div className="flex min-h-dvh flex-col overflow-x-hidden bg-background">
         <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="mx-auto flex h-14 max-w-5xl items-center px-4">
             <Link
@@ -221,7 +221,7 @@ export function ProductAnalysisPage({
   const assessmentData = assessmentLabels[product.assessment] ?? assessmentLabels.low;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
+    <div className="flex min-h-dvh flex-col overflow-x-hidden bg-background">
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-5xl items-center px-4">
           <Link
@@ -244,7 +244,7 @@ export function ProductAnalysisPage({
           </div>
           <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
             {/* Left column — primary analysis */}
-            <div className="flex flex-col gap-6">
+            <div className="flex min-w-0 flex-col gap-6">
               <ProductHeader
                 name={product.name}
                 brand={product.brand}
@@ -278,7 +278,7 @@ export function ProductAnalysisPage({
             </div>
 
             {/* Right column — supporting information */}
-            <div className="flex flex-col gap-6">
+            <div className="flex min-w-0 flex-col gap-6">
               {product.nutrition && (
                 <NutritionAnalysis
                   title={labels.nutrition.title}

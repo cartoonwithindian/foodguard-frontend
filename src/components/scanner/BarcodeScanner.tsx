@@ -35,6 +35,20 @@ export function BarcodeScanner({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Photo search: opens the native scanner (camera -> photo -> visual-search
+  // API -> similar products). Falls back to the file picker elsewhere, same
+  // as VisualSearchPanel's native-scanner button.
+  const openPhotoSearch = useCallback(() => {
+    setErrorMsg(null);
+    const bridge = (window as unknown as Record<string, unknown>)
+      .FoodGuardBridge as { openVisualScanner?: () => void } | undefined;
+    if (bridge?.openVisualScanner) {
+      bridge.openVisualScanner();
+    } else {
+      fileInputRef.current?.click();
+    }
+  }, []);
+
   const handleBarcodeDetected = useCallback(
     (barcode: string) => {
       const clean = barcode.trim();
@@ -146,6 +160,15 @@ export function BarcodeScanner({
               <Upload className="size-4" aria-hidden="true" />
             )}
             {decodingFile ? "Scanning Barcode..." : "Upload Barcode Image"}
+          </button>
+
+          <button
+            type="button"
+            onClick={openPhotoSearch}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-5 py-3.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+          >
+            <Camera className="size-4" aria-hidden="true" />
+            Take Photo and Search
           </button>
         </div>
       )}
