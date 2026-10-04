@@ -8,6 +8,8 @@ import { ChatInput } from "./ChatInput";
 import { QuickActions } from "./QuickActions";
 import { EmptyState as ChatEmptyState, Typing as ChatTyping, ErrorBanner as ChatErrorBanner } from "./ChatStates";
 import { sendChatMessage, fetchChatHistory, ChatClientError } from "@/lib/chat-client";
+import { ChallengeCompleteDialog } from "@/components/challenges/ChallengeCompleteDialog";
+import type { ChallengeCompletion } from "@/services/challenge.service";
 import type { ChatAction, ChatSourceRef } from "@/types/chat";
 
 export type ChatPageProps = {
@@ -42,6 +44,7 @@ export function ChatPage({
   );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [completedChallenge, setCompletedChallenge] = useState<ChallengeCompletion | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -100,6 +103,9 @@ export function ChatPage({
           conversationId,
         });
         setConversationId(result.conversation_id);
+        if (result.challenge_completions?.[0]) {
+          setCompletedChallenge(result.challenge_completions[0]);
+        }
         setMessages((prev) => [
           ...prev,
           {
@@ -137,7 +143,7 @@ export function ChatPage({
         productName={productName}
         brand={brand}
       />
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-3">
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-5 sm:px-6 lg:py-8">
         <div
           ref={listRef}
           className="flex flex-1 flex-col gap-3 overflow-y-auto py-4"
@@ -159,6 +165,9 @@ export function ChatPage({
         />
         <ChatInput disabled={pending} onSend={(text) => void handleSend(text)} />
       </main>
+      {completedChallenge && (
+        <ChallengeCompleteDialog challenge={completedChallenge} onClose={() => setCompletedChallenge(null)} />
+      )}
     </div>
   );
 }

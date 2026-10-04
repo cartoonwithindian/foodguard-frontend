@@ -679,6 +679,7 @@ export function buildAnalysisPath(
   product: IdentifiedProduct,
   extracted?: ExtractedInfo,
   imageUrl?: string | null,
+  scanEventId?: string,
 ): string {
   const params = new URLSearchParams();
   if (product.barcode) params.set("barcode", product.barcode);
@@ -694,6 +695,7 @@ export function buildAnalysisPath(
   }
   const img = imageUrl || product.imageUrl || extracted?.imageUrl;
   if (img) params.set("imageUrl", img);
+  if (scanEventId) params.set("scan_event_id", scanEventId);
   const qs = params.toString();
   return qs ? `/analysis?${qs}` : "/analysis";
 }

@@ -2,7 +2,6 @@
 
 import { Search, Bell, Menu } from "lucide-react";
 import type { AdminLabels } from "@/data/admin-labels";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 type AdminHeaderProps = {
   labels: AdminLabels["header"];
@@ -45,9 +44,6 @@ export function AdminHeader({ labels, onToggleSidebar }: AdminHeaderProps) {
             3
           </span>
         </button>
-
-        {/* Theme toggle */}
-        <ThemeToggle />
 
         {/* Divider */}
         <div className="mx-1 h-5 w-px bg-border" />

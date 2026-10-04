@@ -31,7 +31,7 @@ export function QuickActions({ disabled, hasProduct, onPick }: QuickActionsProps
           type="button"
           disabled={disabled}
           onClick={() => onPick(action.message)}
-          className="shrink-0 rounded-full border bg-card px-3.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+          className="shrink-0 rounded-full border border-primary/20 bg-card px-3.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary-light hover:text-primary-dark disabled:opacity-40"
           data-testid={`quick-action-${action.label}`}
         >
           {action.label}

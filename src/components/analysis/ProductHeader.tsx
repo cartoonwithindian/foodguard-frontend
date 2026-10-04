@@ -35,7 +35,7 @@ export function ProductHeader({
     .map((word) => word[0]?.toUpperCase())
     .join("");
   return (
-    <div className="flex flex-col gap-4">
+    <div className="foodguard-card flex flex-col gap-4 p-5 sm:p-6">
       <Link
         href="/scan"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-fit"
@@ -44,7 +44,7 @@ export function ProductHeader({
         {backButton}
       </Link>
       <div className="flex gap-4">
-        <div className="size-20 shrink-0 rounded-2xl bg-muted flex items-center justify-center overflow-hidden">
+        <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-secondary">
           {imageUrl && !imageFailed ? (
             <img
               src={imageUrl}
@@ -59,7 +59,7 @@ export function ProductHeader({
           )}
         </div>
         <div className="flex flex-col gap-1">
-          <h1 className="text-xl font-bold text-foreground">{name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">{name}</h1>
           <p className="text-sm text-muted-foreground">
             {brand} · {CATEGORY_LABELS[category]}
           </p>

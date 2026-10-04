@@ -1,8 +1,8 @@
 "use client";
 
-import { ChevronRight, ScanLine } from "lucide-react";
+import { ChevronRight, History, Clock } from "lucide-react";
 import type { DashboardLabels } from "@/data/dashboard-labels";
-import type { ScannedProduct } from "@/data/mock-data";
+import type { ScannedProduct } from "@/types/dashboard";
 import { CATEGORY_LABELS, CONCERN_COLORS } from "@/data/mock-data";
 
 type RecentScansProps = {
@@ -21,79 +21,72 @@ export function RecentScans({
   hasScans,
 }: RecentScansProps) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-foreground">{labels.title}</h2>
+    <div className="rounded-xl bg-card p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <History className="size-5 text-muted-foreground" aria-hidden="true" />
+          <h2 className="text-base font-medium text-foreground">{labels.title}</h2>
+        </div>
         {hasScans && (
           <button
             type="button"
             onClick={onViewAll}
-            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            className="inline-flex items-center gap-1 text-xs font-medium text-orange-600 hover:underline dark:text-orange-400"
           >
             {labels.viewAll}
+            <ChevronRight className="size-3.5" />
           </button>
         )}
       </div>
 
       {!hasScans ? (
-        <div className="rounded-xl border border-dashed border-border py-10 text-center">
-          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-xl bg-muted">
-            <ScanLine className="size-6 text-muted-foreground" aria-hidden="true" />
-          </div>
+        <div className="rounded-lg border border-dashed border-border py-8 text-center">
           <p className="text-sm font-medium text-foreground">{labels.noScansTitle}</p>
           <p className="mt-1 text-xs text-muted-foreground">{labels.noScansDescription}</p>
           <button
             type="button"
             onClick={onScan}
-            className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-5 text-sm font-medium text-white"
           >
-            <ScanLine className="size-4" aria-hidden="true" />
             {labels.noScansButton}
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <div className="space-y-3">
           {scans.slice(0, 5).map((product) => {
             const colors = CONCERN_COLORS[product.concern];
             const concernLabel =
               product.concern === "high"
-                ? "High Concern"
+                ? "High concern"
                 : product.concern === "moderate"
                   ? "Moderate"
-                  : "Low Concern";
+                  : "Lower concern";
 
             return (
-              <div
+              <button
                 key={product.id}
-                className="flex items-center gap-3 rounded-xl border border-border bg-background p-3.5"
+                type="button"
+                onClick={onViewAll}
+                className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left hover:bg-muted"
               >
+                <div className={`flex size-8 items-center justify-center rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}>
+                  {product.concern === "low" ? "L" : product.concern === "high" ? "H" : "M"}
+                </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">
                     {product.name}
                   </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {CATEGORY_LABELS[product.category]}
-                  </p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${colors.bg} ${colors.text}`}
-                    >
-                      <span
-                        className={`size-1.5 rounded-full ${colors.dot}`}
-                        aria-hidden="true"
-                      />
-                      {concernLabel}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {labels.scannedLabel.replace("{time}", product.scannedAt)}
-                    </span>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Clock className="size-3" />
+                    <span>{product.scannedAt}</span>
+                    <span>· {CATEGORY_LABELS[product.category]}</span>
                   </div>
+                  <span className={`mt-1 inline-block text-xs font-medium ${colors.text}`}>
+                    {concernLabel}
+                  </span>
                 </div>
-                <ChevronRight
-                  className="size-4 shrink-0 text-muted-foreground"
-                  aria-hidden="true"
-                />
-              </div>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              </button>
             );
           })}
         </div>

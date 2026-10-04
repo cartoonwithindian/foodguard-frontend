@@ -51,7 +51,7 @@ export function NutritionAnalysis({
   ];
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <div className="foodguard-card p-5">
       <h3 className="text-base font-semibold text-foreground mb-4">{title}</h3>
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full text-sm">

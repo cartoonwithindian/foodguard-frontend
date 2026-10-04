@@ -166,7 +166,7 @@ export function AuthPage() {
                 </svg>
               </div>
               <span className="text-sm font-semibold text-foreground">
-                Know What&apos;s Inside
+                FoodGuard
               </span>
             </div>
 

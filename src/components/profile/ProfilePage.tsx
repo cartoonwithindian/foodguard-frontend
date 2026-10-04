@@ -5,7 +5,9 @@ import { ArrowLeft, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { firebaseGetProfile, firebaseSaveProfile } from "@/lib/firebase/db";
+import { apiUrl } from "@/lib/network/api-url";
 import { firebaseUpdateDisplayName } from "@/lib/firebase/auth";
+import { useSafeBack } from "@/lib/navigation/use-safe-back";
 import { ProfileHeader } from "./ProfileHeader";
 import { PersonalInfoSection } from "./PersonalInfoSection";
 import { GoalsSection } from "./GoalsSection";
@@ -15,14 +17,12 @@ import { LanguageSection } from "./LanguageSection";
 import { PrivacySection } from "./PrivacySection";
 import { SecuritySection } from "./SecuritySection";
 import { AccountActionsSection } from "./AccountActionsSection";
+import { GamificationCard } from "@/components/dashboard/GamificationCard";
 import {
-  MOCK_PROFILE,
-  MOCK_GOAL,
-  MOCK_GOAL_PREFS,
-  MOCK_PRODUCT_PREFS,
-  MOCK_ANALYSIS_PREFS,
-  MOCK_PRIVACY,
-  MOCK_SECURITY,
+  EMPTY_PROFILE,
+  EMPTY_ANALYSIS_PREFS,
+  EMPTY_PRIVACY,
+  EMPTY_SECURITY_INFO,
   type UserProfile,
   type UserGoal,
   type GoalSubPreference,
@@ -36,18 +36,105 @@ type ProfilePageProps = {
   lang?: string;
 };
 
+type AuthMe = {
+  id: string;
+  name: string;
+  email: string;
+  memberSince: string;
+  language: string;
+  preferences: {
+    healthGoals?: string[];
+    avoidIngredients?: string[];
+    preferredIngredients?: string[];
+    sensitivityPreferences?: string[];
+  } | null;
+};
+
+function getJwt(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem("foodgaurd-token");
+  } catch {
+    return null;
+  }
+}
+
 export function ProfilePage({ lang = "en" }: ProfilePageProps) {
   const router = useRouter();
+  const goBack = useSafeBack("/");
   const t = getProfileLabels(lang);
   const { firebaseMode, firebaseUser, logout } = useAuth();
 
-  const [profile, setProfile] = useState<UserProfile>(MOCK_PROFILE);
-  const [goal, setGoal] = useState<UserGoal>(MOCK_GOAL);
-  const [goalPrefs, setGoalPrefs] = useState<GoalSubPreference[]>(MOCK_GOAL_PREFS);
-  const [productPrefs, setProductPrefs] = useState<ProductPreference[]>(MOCK_PRODUCT_PREFS);
-  const [analysisPrefs, setAnalysisPrefs] = useState<AnalysisPreference[]>(MOCK_ANALYSIS_PREFS);
-  const [privacy, setPrivacy] = useState<PrivacySettings>(MOCK_PRIVACY);
+  const [profile, setProfile] = useState<UserProfile>(EMPTY_PROFILE);
+  const [goal, setGoal] = useState<UserGoal>(null);
+  const [goalPrefs, setGoalPrefs] = useState<GoalSubPreference[]>([]);
+  const [productPrefs, setProductPrefs] = useState<ProductPreference[]>([]);
+  const [analysisPrefs, setAnalysisPrefs] = useState<AnalysisPreference[]>(EMPTY_ANALYSIS_PREFS);
+  const [privacy, setPrivacy] = useState<PrivacySettings>(EMPTY_PRIVACY);
   const [language, setLanguage] = useState(lang);
+
+  useEffect(() => {
+    if (firebaseMode) return;
+    const token = getJwt();
+    if (!token) return;
+
+    let cancelled = false;
+    void fetch(apiUrl("/api/users/me"), {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const payload = (await response.json()) as { success: boolean; data?: AuthMe };
+        const me = payload.data;
+        if (!payload.success || !me || cancelled) return;
+
+        setProfile({
+          id: me.id,
+          name: me.name,
+          email: me.email,
+          age: null,
+          height: null,
+          weight: null,
+          memberSince: me.memberSince,
+          accountStatus: "active",
+        });
+        if (me.language === "hi" || me.language === "en") {
+          setLanguage(me.language);
+          sessionStorage.setItem("app-preferred-language", me.language);
+        }
+
+        const backendGoal = me.preferences?.healthGoals?.[0];
+        if (backendGoal && ["maintain_weight", "weight_loss", "weight_gain", "improve_nutrition", "general_awareness"].includes(backendGoal)) {
+          setGoal(backendGoal as UserGoal);
+        }
+        const backendGoalPrefs = (me.preferences?.sensitivityPreferences ?? []).map((value) => ({
+          key: value,
+          label: value.replaceAll("_", " "),
+          enabled: true,
+        }));
+        setGoalPrefs(backendGoalPrefs);
+        setProductPrefs([
+          ...(me.preferences?.avoidIngredients ?? []).map((value, index) => ({
+            id: `avoid-${index}`,
+            type: "avoid" as const,
+            value,
+          })),
+          ...(me.preferences?.preferredIngredients ?? []).map((value, index) => ({
+            id: `prefer-${index}`,
+            type: "prefer" as const,
+            value,
+          })),
+        ]);
+      })
+      .catch(() => {
+        // Keep the page usable with explicit empty fields when the API is unavailable.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [firebaseMode]);
 
   useEffect(() => {
     if (!firebaseMode || !firebaseUser) return;
@@ -80,19 +167,53 @@ export function ProfilePage({ lang = "en" }: ProfilePageProps) {
           email: updated.email,
         });
         void firebaseUpdateDisplayName(updated.name);
+      } else {
+        const token = getJwt();
+        if (token) {
+          void fetch(apiUrl("/api/users/me"), {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name: updated.name }),
+          });
+        }
       }
     },
     [firebaseMode, firebaseUser],
   );
 
+  const persistBackendPreferences = useCallback((payload: Record<string, unknown>) => {
+    if (firebaseMode) return;
+    const token = getJwt();
+    if (!token) return;
+    void fetch(apiUrl("/api/users/me/preferences"), {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+  }, [firebaseMode]);
+
   const handleSaveGoals = useCallback((newGoal: UserGoal, newPrefs: GoalSubPreference[]) => {
     setGoal(newGoal);
     setGoalPrefs(newPrefs);
-  }, []);
+    persistBackendPreferences({
+      healthGoals: newGoal ? [newGoal] : [],
+      sensitivityPreferences: newPrefs.filter((pref) => pref.enabled).map((pref) => pref.key),
+    });
+  }, [persistBackendPreferences]);
 
   const handleSaveProductPrefs = useCallback((prefs: ProductPreference[]) => {
     setProductPrefs(prefs);
-  }, []);
+    persistBackendPreferences({
+      avoidIngredients: prefs.filter((pref) => pref.type === "avoid").map((pref) => pref.value),
+      preferredIngredients: prefs.filter((pref) => pref.type === "prefer").map((pref) => pref.value),
+    });
+  }, [persistBackendPreferences]);
 
   const handleSaveAnalysisPrefs = useCallback((prefs: AnalysisPreference[]) => {
     setAnalysisPrefs(prefs);
@@ -119,10 +240,10 @@ export function ProfilePage({ lang = "en" }: ProfilePageProps) {
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-2xl items-center gap-3 px-4">
+        <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4 sm:px-6">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={goBack}
             className="flex size-9 items-center justify-center rounded-xl transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label="Go back"
           >
@@ -134,36 +255,40 @@ export function ProfilePage({ lang = "en" }: ProfilePageProps) {
       </header>
 
       {/* Content */}
-      <main className="mx-auto max-w-2xl space-y-4 px-4 pt-4 sm:space-y-5 sm:px-6">
+      <main className="mx-auto max-w-5xl space-y-4 px-4 pt-4 sm:space-y-5 sm:px-6 lg:pt-8">
         <ProfileHeader
           profile={profile}
           editProfileLabel={t.header.editProfile}
         />
 
-        <PersonalInfoSection
-          profile={profile}
-          labels={t.personalInfo}
-          onSave={handleSaveProfile}
-        />
+        <GamificationCard />
 
-        <GoalsSection
-          initialGoal={goal}
-          initialPrefs={goalPrefs}
-          labels={t.goals}
-          onSave={handleSaveGoals}
-        />
+        <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
+          <PersonalInfoSection
+            profile={profile}
+            labels={t.personalInfo}
+            onSave={handleSaveProfile}
+          />
 
-        <ProductPreferencesSection
-          initialPrefs={productPrefs}
-          labels={t.productPreferences}
-          onSave={handleSaveProductPrefs}
-        />
+          <GoalsSection
+            initialGoal={goal}
+            initialPrefs={goalPrefs}
+            labels={t.goals}
+            onSave={handleSaveGoals}
+          />
 
-        <AnalysisPreferencesSection
-          initialPrefs={analysisPrefs}
-          labels={t.analysisPreferences}
-          onSave={handleSaveAnalysisPrefs}
-        />
+          <ProductPreferencesSection
+            initialPrefs={productPrefs}
+            labels={t.productPreferences}
+            onSave={handleSaveProductPrefs}
+          />
+
+          <AnalysisPreferencesSection
+            initialPrefs={analysisPrefs}
+            labels={t.analysisPreferences}
+            onSave={handleSaveAnalysisPrefs}
+          />
+        </div>
 
         <LanguageSection
           currentLanguage={language}
@@ -178,7 +303,7 @@ export function ProfilePage({ lang = "en" }: ProfilePageProps) {
         />
 
         <SecuritySection
-          info={MOCK_SECURITY}
+          info={EMPTY_SECURITY_INFO}
           labels={t.security}
         />
 

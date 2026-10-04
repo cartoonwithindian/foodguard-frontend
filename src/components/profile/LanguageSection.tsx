@@ -13,7 +13,7 @@ type LanguageSectionProps = {
 
 export function LanguageSection({ currentLanguage, labels, onChange }: LanguageSectionProps) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+    <div className="foodguard-card p-5 sm:p-6">
       <div className="mb-4 flex items-center gap-3">
         <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10">
           <Globe className="size-5 text-primary" aria-hidden="true" />

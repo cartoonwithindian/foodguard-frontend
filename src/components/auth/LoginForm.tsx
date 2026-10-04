@@ -13,6 +13,7 @@ import { AuthDivider } from "@/components/auth/AuthDivider";
 import { SocialLoginButton } from "@/components/auth/SocialLoginButton";
 import { GoogleIcon } from "@/components/auth/GoogleIcon";
 import { apiUrl } from "@/lib/network/api-url";
+import { getLocalTimezone } from "@/services/gamification.service";
 
 type LoginFormProps = {
   labels: AuthLabels["login"];
@@ -85,7 +86,7 @@ export function LoginForm({
         const response = await fetch(apiUrl("/api/auth/login"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim(), password }),
+          body: JSON.stringify({ email: email.trim(), password, timezone: getLocalTimezone() }),
         });
         const json = (await response.json()) as {
           success: boolean;

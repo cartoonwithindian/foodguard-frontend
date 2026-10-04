@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, MessagesSquare } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ArrowLeft, MessagesSquare, Flame, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import type { ProductAnalysisResult } from "@/data/analysis-data";
 import { getAnalysisLabels } from "@/data/analysis-labels";
@@ -25,9 +25,20 @@ import { Disclaimer } from "./Disclaimer";
 import { AnalysisActions } from "./AnalysisActions";
 import { AnalysisLoading } from "./AnalysisLoading";
 import { AnalysisError } from "./AnalysisError";
+import { ChallengeCompleteDialog } from "@/components/challenges/ChallengeCompleteDialog";
 import { analysisCache, analysisCacheKey } from "@/lib/cache/analysis-cache";
 import { OfflineIndicator } from "@/components/offline/OfflineIndicator";
 import { apiUrl } from "@/lib/network/api-url";
+import {
+  createScanEventId,
+  getFoodGuardAuthHeaders,
+  publishGamificationUpdate,
+  type GamificationActivityResult,
+} from "@/services/gamification.service";
+import {
+  submitIngredientViewActivity,
+  type ChallengeCompletion,
+} from "@/services/challenge.service";
 
 type AnalysisPhase = "loading" | "result" | "error";
 
@@ -39,6 +50,7 @@ type ProductAnalysisPageProps = {
   brand?: string;
   ocrText?: string;
   ocrConfidence?: number | null;
+  scanEventId?: string;
   lang?: string;
 };
 
@@ -50,6 +62,7 @@ export function ProductAnalysisPage({
   brand = "",
   ocrText = "",
   ocrConfidence = null,
+  scanEventId: scanEventIdFromQuery,
   lang = "en",
 }: ProductAnalysisPageProps) {
   const labels = getAnalysisLabels(lang);
@@ -57,6 +70,10 @@ export function ProductAnalysisPage({
   const [phase, setPhase] = useState<AnalysisPhase>("loading");
   const [product, setProduct] = useState<ProductAnalysisResult | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [reward, setReward] = useState<GamificationActivityResult | null>(null);
+  const [completedChallenge, setCompletedChallenge] = useState<ChallengeCompletion | null>(null);
+  const scanEventIdRef = useRef<string | null>(null);
+  const scanSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (phase !== "result" || !product || !firebaseMode || !firebaseUser) return;
@@ -81,11 +98,14 @@ export function ProductAnalysisPage({
 
     async function load() {
       setPhase("loading");
+       setReward(null);
+       setCompletedChallenge(null);
       setProduct(null);
       const trimmedBarcode = barcode.trim();
       const trimmedIngredients = ingredients.trim();
       const trimmedName = productName.trim();
       const trimmedOcrText = ocrText.trim();
+      const providedScanEventId = scanEventIdFromQuery?.trim();
       if (!trimmedBarcode && !trimmedIngredients && !trimmedName && !trimmedOcrText) {
         if (!cancelled) setPhase("error");
         return;
@@ -104,10 +124,29 @@ export function ProductAnalysisPage({
         }
       }
 
+      const scanSignature = [
+        trimmedBarcode,
+        trimmedIngredients,
+        trimmedName,
+        brand.trim(),
+        trimmedOcrText,
+        imageUrl,
+        providedScanEventId ?? "",
+      ].join("|");
+      if (scanSignatureRef.current !== scanSignature) {
+        scanSignatureRef.current = scanSignature;
+        scanEventIdRef.current = providedScanEventId || createScanEventId();
+      }
+      const scanEventId = providedScanEventId || scanEventIdRef.current || createScanEventId();
+      scanEventIdRef.current = scanEventId;
+
       try {
         const response = await fetch(apiUrl("/api/analyze"), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...getFoodGuardAuthHeaders(),
+          },
           signal: controller.signal,
           body: JSON.stringify({
             barcode: trimmedBarcode || undefined,
@@ -118,12 +157,29 @@ export function ProductAnalysisPage({
             ocrConfidence:
               typeof ocrConfidence === "number" ? ocrConfidence : undefined,
             imageAvailable: Boolean(imageUrl || trimmedOcrText),
+            scan_event_id: providedScanEventId || undefined,
             language: lang === "hi" ? "hi" : "en",
           }),
         });
         const json = (await response.json()) as {
           success: boolean;
           data?: ProductAnalysisResult;
+           meta?: {
+             gamification?: {
+               xp_awarded: number;
+               total_xp: number;
+               current_streak: number;
+               longest_streak: number;
+               activity_date: string;
+               idempotent: boolean;
+              completed_challenges?: Array<{
+                challenge_id: string;
+                name: string;
+                description: string;
+                xp_reward: number;
+              }>;
+             } | null;
+           } | null;
           error?: { message?: string } | null;
         };
         if (cancelled) return;
@@ -137,6 +193,52 @@ export function ProductAnalysisPage({
         setProduct(json.data);
         setPhase("result");
         if (cacheKey) void analysisCache().save(cacheKey, json.data);
+
+         const analysisReward = json.meta?.gamification;
+         if (analysisReward && !analysisReward.idempotent) {
+           setReward({
+             xp_awarded: analysisReward.xp_awarded,
+             total_xp: analysisReward.total_xp,
+             current_streak: analysisReward.current_streak,
+             longest_streak: analysisReward.longest_streak,
+             activity_date: analysisReward.activity_date,
+             idempotent: analysisReward.idempotent,
+           });
+           if (analysisReward.completed_challenges?.[0]) {
+             setCompletedChallenge(analysisReward.completed_challenges[0]);
+           }
+         }
+
+         // Rewards come from the /api/analyze response itself. The separate
+         // self-service product_scan call was removed: it let a client assert a
+         // scan and mint XP with no analysis behind it, so that endpoint is now
+         // retired server-side. Cached results never award anything.
+         if (providedScanEventId && json.meta?.gamification) {
+           publishGamificationUpdate({
+             total_xp: json.meta.gamification.total_xp,
+             current_streak: json.meta.gamification.current_streak,
+             longest_streak: json.meta.gamification.longest_streak,
+             last_activity_date: json.meta.gamification.activity_date,
+           });
+         }
+
+         // Ingredient views are a separate, non-scoring activity and still have
+         // their own endpoint.
+         const freshProduct = json.data;
+         if (providedScanEventId && freshProduct.ingredients?.length) {
+           void submitIngredientViewActivity(
+             freshProduct.id,
+             `${scanEventId}:ingredients`,
+           )
+             .then((viewActivity) => {
+               if (!viewActivity.idempotent && viewActivity.completed_challenges[0]) {
+                 setCompletedChallenge(viewActivity.completed_challenges[0]);
+               }
+             })
+             .catch(() => {
+               // Ingredient challenges are best-effort and never block analysis.
+             });
+         }
       } catch (error) {
         if (cancelled) return;
         if (error instanceof DOMException && error.name === "AbortError") return;
@@ -152,7 +254,7 @@ export function ProductAnalysisPage({
       cancelled = true;
       controller.abort();
     };
-  }, [barcode, ingredients, productName, brand, ocrText, ocrConfidence, lang, attempt, imageUrl]);
+  }, [barcode, ingredients, productName, brand, ocrText, ocrConfidence, scanEventIdFromQuery, lang, attempt, imageUrl]);
 
   const handleTryAgain = useCallback(() => {
     setAttempt((a) => a + 1);
@@ -172,7 +274,7 @@ export function ProductAnalysisPage({
             </Link>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-12">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6 lg:py-16">
           <AnalysisLoading
             title={labels.loading.title}
             description={labels.loading.description}
@@ -197,7 +299,7 @@ export function ProductAnalysisPage({
             </Link>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-12">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6 lg:py-16">
           <AnalysisError
             title={labels.error.title}
             description={labels.error.description}
@@ -237,7 +339,7 @@ export function ProductAnalysisPage({
         </div>
       </header>
 
-      <main className="mx-auto w-full flex-1 px-4 py-6">
+      <main className="mx-auto w-full flex-1 px-4 py-6 sm:px-6 lg:py-10">
         <div className="mx-auto max-w-5xl">
           <div className="mb-4 flex justify-end">
             <OfflineIndicator />
@@ -397,6 +499,64 @@ export function ProductAnalysisPage({
           </div>
         </div>
       </main>
+
+      {completedChallenge && (
+        <ChallengeCompleteDialog challenge={completedChallenge} onClose={() => setCompletedChallenge(null)} />
+      )}
+
+      {reward && !reward.idempotent && !completedChallenge && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-sidebar/45 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="foodguard-reward-title"
+        >
+          <div className="foodguard-card relative w-full max-w-sm bg-card p-7 text-center shadow-xl">
+            <button
+              type="button"
+              onClick={() => setReward(null)}
+              className="absolute right-4 top-4 flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label="Close reward"
+            >
+              <X className="size-4" aria-hidden="true" />
+            </button>
+            <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary-light text-primary">
+              <Sparkles className="size-7" aria-hidden="true" />
+            </div>
+            <p className="mt-5 text-3xl font-semibold tracking-tight text-primary">
+              +{reward.xp_awarded} XP
+            </p>
+            <h2 id="foodguard-reward-title" className="mt-2 text-lg font-semibold text-foreground">
+              Great! Product scanned.
+            </h2>
+            <div className="mt-6 grid grid-cols-2 gap-3 text-left">
+              <div className="rounded-xl bg-primary-light/60 p-3">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Flame className="size-3.5 text-primary" aria-hidden="true" />
+                  Streak updated
+                </div>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {reward.current_streak} {reward.current_streak === 1 ? "day" : "days"}
+                </p>
+              </div>
+              <div className="rounded-xl bg-secondary p-3">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Sparkles className="size-3.5 text-primary" aria-hidden="true" />
+                  Total XP
+                </div>
+                <p className="mt-1 text-sm font-semibold text-foreground">{reward.total_xp} XP</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReward(null)}
+              className="mt-6 w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

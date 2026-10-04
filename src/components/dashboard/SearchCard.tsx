@@ -10,22 +10,13 @@ type SearchCardProps = {
 
 export function SearchCard({ labels, onClick }: SearchCardProps) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-      <div className="mb-3 flex items-center gap-3">
-        <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10">
-          <Search className="size-5 text-primary" aria-hidden="true" />
-        </div>
-        <div>
-          <h2 className="text-base font-semibold text-foreground">{labels.title}</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">{labels.subtitle}</p>
-        </div>
-      </div>
+    <div className="relative">
+      <Search className="absolute left-3 top-3.5 size-5 text-muted-foreground" aria-hidden="true" />
       <button
         type="button"
         onClick={onClick}
-        className="flex h-11 w-full items-center gap-3 rounded-xl border border-border bg-background px-4 text-left text-sm text-muted-foreground transition-colors hover:border-primary/30 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        className="flex h-12 w-full items-center rounded-xl border border-border bg-card pl-10 pr-4 text-left text-sm text-muted-foreground shadow-sm transition-colors hover:border-primary/40 hover:bg-primary-light/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
-        <Search className="size-4 shrink-0" aria-hidden="true" />
         {labels.placeholder}
       </button>
     </div>

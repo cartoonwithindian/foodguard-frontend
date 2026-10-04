@@ -1,4 +1,5 @@
 import type { ChatAction, ChatSourceRef } from "@/types/chat";
+import type { ChallengeCompletion } from "@/services/challenge.service";
 
 export type ChatMessageView = {
   id: string;
@@ -13,6 +14,7 @@ export type ChatSendResponse = {
   actions: ChatAction[];
   conversation_id: string;
   metadata: { intent: string; model_version: string };
+  challenge_completions?: ChallengeCompletion[];
 };
 
 export type ChatHistoryResponse = {

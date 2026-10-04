@@ -25,7 +25,7 @@ export function AnalysisLoading({
   }, [currentStage, stages.length]);
 
   return (
-    <div className="flex flex-col items-center gap-6 rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+    <div className="foodguard-card flex flex-col items-center gap-6 p-8 text-center">
       <div className="relative size-16">
         <div className="absolute inset-0 rounded-full border-4 border-muted" />
         <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />

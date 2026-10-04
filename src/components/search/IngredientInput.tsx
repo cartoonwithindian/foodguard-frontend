@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ClipboardPaste, Search, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { detectInputType } from "@/data/search-data";
@@ -26,7 +26,23 @@ export function IngredientInput({
   onSearch,
 }: IngredientInputProps) {
   const [value, setValue] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputType = value.trim() ? detectInputType(value) : null;
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const resizeTextarea = () => {
+      textarea.style.height = "auto";
+      const borderHeight = textarea.offsetHeight - textarea.clientHeight;
+      textarea.style.height = `${textarea.scrollHeight + borderHeight + 2}px`;
+      textarea.style.overflowY = textarea.scrollHeight > textarea.clientHeight ? "auto" : "hidden";
+    };
+
+    resizeTextarea();
+    window.addEventListener("resize", resizeTextarea);
+    return () => window.removeEventListener("resize", resizeTextarea);
+  }, [value]);
 
   const typeLabel =
     inputType === "ingredient_list"
@@ -60,28 +76,29 @@ export function IngredientInput({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="relative">
+      <form onSubmit={handleSubmit} className="relative min-w-0">
         <div className="relative">
           <Search
             className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-muted-foreground"
             aria-hidden="true"
           />
           <textarea
+            ref={textareaRef}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={placeholder}
-            rows={value.includes(",") || value.split("\n").length > 1 ? 3 : 1}
+            rows={1}
             className={cn(
-              "w-full rounded-2xl border border-border bg-background py-4 pl-12 pr-24 text-base text-foreground placeholder:text-muted-foreground shadow-sm resize-none",
+              "block w-full min-w-0 max-h-48 overflow-x-hidden overflow-y-hidden rounded-2xl border border-border bg-background py-3 pl-11 pr-[6.5rem] text-sm text-foreground placeholder:text-xs placeholder:leading-[1.75] placeholder:text-muted-foreground shadow-sm resize-none sm:py-4 sm:pl-12 sm:pr-32 sm:text-base sm:placeholder:text-sm",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
-              "transition-all duration-200",
+              "transition-colors duration-200",
             )}
           />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+          <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1 sm:gap-1.5">
             <button
               type="button"
               onClick={handlePaste}
-              className="rounded-lg border border-border bg-card p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="shrink-0 rounded-lg border border-border bg-card p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:p-2"
               aria-label="Paste from clipboard"
             >
               <ClipboardPaste className="size-4" />
@@ -89,7 +106,7 @@ export function IngredientInput({
             <button
               type="submit"
               disabled={!value.trim()}
-              className="rounded-xl bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="shrink-0 rounded-xl bg-primary px-2 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed sm:px-3 sm:text-sm"
             >
               {searchButton}
             </button>

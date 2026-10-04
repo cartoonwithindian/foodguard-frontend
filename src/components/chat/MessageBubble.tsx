@@ -21,7 +21,7 @@ export function MessageBubble({ message }: { message: ChatMessageView }) {
   return (
     <div className="flex flex-col gap-2">
       <div
-        className="max-w-[92%] rounded-2xl rounded-bl-sm border bg-card px-4 py-3 text-sm leading-relaxed text-card-foreground"
+        className="max-w-[92%] rounded-2xl rounded-bl-sm border border-primary/10 bg-secondary px-4 py-3 text-sm leading-relaxed text-foreground"
         data-testid="chat-assistant-message"
       >
         {renderContent(message.content)}

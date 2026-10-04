@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, Check } from "lucide-react";
 import type { UserProfile } from "@/data/profile-data";
 import type { ProfileLabels } from "@/data/profile-labels";
@@ -22,6 +22,16 @@ export function PersonalInfoSection({ profile, labels, onSave }: PersonalInfoSec
     weight: profile.weight?.toString() ?? "",
   });
 
+  useEffect(() => {
+    setForm({
+      name: profile.name,
+      email: profile.email,
+      age: profile.age?.toString() ?? "",
+      height: profile.height?.toString() ?? "",
+      weight: profile.weight?.toString() ?? "",
+    });
+  }, [profile.age, profile.email, profile.height, profile.name, profile.weight]);
+
   const handleSave = () => {
     onSave({
       ...profile,
@@ -37,7 +47,7 @@ export function PersonalInfoSection({ profile, labels, onSave }: PersonalInfoSec
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+    <div className="foodguard-card p-5 sm:p-6">
       <div className="mb-4 flex items-center gap-3">
         <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10">
           <User className="size-5 text-primary" aria-hidden="true" />
@@ -59,7 +69,7 @@ export function PersonalInfoSection({ profile, labels, onSave }: PersonalInfoSec
               className="h-10 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             />
           ) : (
-            <p className="text-sm text-muted-foreground">{profile.name}</p>
+            <p className="text-sm text-muted-foreground">{profile.name || "Not provided"}</p>
           )}
         </div>
 
@@ -76,7 +86,7 @@ export function PersonalInfoSection({ profile, labels, onSave }: PersonalInfoSec
               className="h-10 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             />
           ) : (
-            <p className="text-sm text-muted-foreground">{profile.email}</p>
+            <p className="text-sm text-muted-foreground">{profile.email || "Not provided"}</p>
           )}
         </div>
 

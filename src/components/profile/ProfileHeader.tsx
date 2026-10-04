@@ -10,13 +10,15 @@ type ProfileHeaderProps = {
 };
 
 export function ProfileHeader({ profile, editProfileLabel, onEdit }: ProfileHeaderProps) {
-  const memberDate = new Date(profile.memberSince).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  const memberDate = profile.memberSince
+    ? new Date(profile.memberSince).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      })
+    : null;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+    <div className="foodguard-card p-5 sm:p-6">
       <div className="flex items-center gap-4">
         {/* Avatar */}
         <div className="relative">
@@ -34,15 +36,19 @@ export function ProfileHeader({ profile, editProfileLabel, onEdit }: ProfileHead
 
         {/* Info */}
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-semibold text-foreground">{profile.name}</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground truncate">{profile.email}</p>
+          <h2 className="text-lg font-semibold text-foreground">{profile.name || "Your profile"}</h2>
+          <p className="mt-0.5 truncate text-sm text-muted-foreground">
+            {profile.email || "Sign in to load your account details"}
+          </p>
           <div className="mt-2 flex items-center gap-3">
-            <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
-              <span className="size-1.5 rounded-full bg-green-500" aria-hidden="true" />
-              {profile.accountStatus === "active" ? "Active" : "Inactive"}
-            </span>
+            {profile.email && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-medium text-primary-dark">
+                <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
+                {profile.accountStatus === "active" ? "Active" : "Inactive"}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground">
-              Member since {memberDate}
+              {memberDate ? `Member since ${memberDate}` : "Account details unavailable"}
             </span>
           </div>
         </div>

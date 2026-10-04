@@ -12,7 +12,7 @@ type SecuritySectionProps = {
 
 export function SecuritySection({ info, labels }: SecuritySectionProps) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+    <div className="foodguard-card p-5 sm:p-6">
       <div className="mb-4 flex items-center gap-3">
         <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10">
           <Lock className="size-5 text-primary" aria-hidden="true" />
@@ -29,7 +29,7 @@ export function SecuritySection({ info, labels }: SecuritySectionProps) {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground">{labels.changePassword}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {labels.lastChanged}: {info.lastPasswordChange}
+              {info.lastPasswordChange ? `${labels.lastChanged}: ${info.lastPasswordChange}` : "Not available"}
             </p>
           </div>
           <button
@@ -45,7 +45,7 @@ export function SecuritySection({ info, labels }: SecuritySectionProps) {
           <div>
             <p className="text-sm font-medium text-foreground">{labels.twoFactor}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {info.twoFactorEnabled ? labels.twoFactorEnabled : labels.twoFactorDisabled}
+              {info.lastPasswordChange ? (info.twoFactorEnabled ? labels.twoFactorEnabled : labels.twoFactorDisabled) : "Not available"}
             </p>
           </div>
           <div
@@ -68,7 +68,7 @@ export function SecuritySection({ info, labels }: SecuritySectionProps) {
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-foreground">{labels.activeSessions}</p>
             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-              {info.activeSessions}
+              {info.lastPasswordChange ? info.activeSessions : "—"}
             </span>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{labels.sessionsCount}</p>

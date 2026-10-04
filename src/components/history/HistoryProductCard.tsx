@@ -22,6 +22,7 @@ export function HistoryProductCard({
   onDelete,
 }: HistoryProductCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const colors = product.assessment === "high"
@@ -60,10 +61,19 @@ export function HistoryProductCard({
   return (
     <div className="group relative flex items-center gap-3 rounded-xl border border-border bg-card p-3.5 shadow-sm transition-all hover:border-primary/30 hover:shadow">
       {/* Product icon placeholder */}
-      <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted">
-        <span className="text-lg font-bold text-muted-foreground">
-          {product.name.charAt(0)}
-        </span>
+      <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted">
+        {product.analysis.imageUrl && !imageFailed ? (
+          <img
+            src={product.analysis.imageUrl}
+            alt=""
+            className="size-full object-cover"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <span className="text-lg font-bold text-muted-foreground">
+            {product.name.charAt(0)}
+          </span>
+        )}
       </div>
 
       {/* Info */}
@@ -76,7 +86,7 @@ export function HistoryProductCard({
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${colors.bg} ${colors.text}`}
+            className={`inline-flex items-center gap-1 rounded-full border border-transparent px-2 py-0.5 text-xs font-medium ${colors.bg} ${colors.text}`}
           >
             <span className={`size-1.5 rounded-full ${colors.dot}`} aria-hidden="true" />
             {concernLabel}

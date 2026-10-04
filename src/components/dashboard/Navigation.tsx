@@ -6,8 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { APP_LANGUAGES } from "@/data/languages";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/components/AuthProvider";
+import { BrandMark } from "@/components/ui/BrandMark";
 
 type NavItem = {
   key: string;
@@ -17,15 +17,11 @@ type NavItem = {
 };
 
 type TopNavigationProps = {
-  items: NavItem[];
-  activeKey: string;
   currentLanguage?: string;
   onLanguageChange?: (langId: string) => void;
 };
 
 export function TopNavigation({
-  items,
-  activeKey,
   currentLanguage,
   onLanguageChange,
 }: TopNavigationProps) {
@@ -53,77 +49,18 @@ export function TopNavigation({
 
   return (
     <nav
-      className="hidden border-b border-border bg-card/80 backdrop-blur-md lg:block"
+      className="border-b border-border bg-card/90 backdrop-blur-md lg:hidden"
       aria-label="Main navigation"
     >
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-        {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5" aria-label="Home">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/15">
-            <svg
-              viewBox="0 0 48 48"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="size-5 text-primary"
-              aria-hidden="true"
-            >
-              <path
-                d="M24 8c-2.5 0-4.5 2-4.5 4.5v2.2c-6.2 1.4-10.5 7-10.5 13.3 0 7.7 6.3 14 14 14s14-6.3 14-14c0-6.3-4.3-11.9-10.5-13.3V12.5C28.5 10 26.5 8 24 8z"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M20 22h8M24 18v8"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              <circle cx="34" cy="34" r="7" stroke="currentColor" strokeWidth="2.5" />
-              <path
-                d="M38.5 38.5L42 42"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
+          <BrandMark className="size-8" iconClassName="size-4" />
           <span className="text-sm font-semibold text-foreground">
             FoodGuard
           </span>
         </Link>
 
-        {/* Nav links */}
         <div className="flex items-center gap-1">
-          {items.map(({ key, label, href, Icon }) => {
-            const isActive = key === activeKey;
-            return (
-              <Link
-                key={key}
-                href={href}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-                aria-current={isActive ? "page" : undefined}
-              >
-                <Icon className="size-4" aria-hidden="true" />
-                {label}
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Right actions */}
-        <div className="flex items-center gap-1">
-          {/* Theme toggle */}
-          <ThemeToggle />
-
-          {/* Language selector */}
           {currentLanguage && onLanguageChange && (
           <div ref={langRef} className="relative">
             <button
@@ -152,7 +89,7 @@ export function TopNavigation({
                       "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm transition-colors",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                       currentLanguage === lang.id
-                        ? "bg-primary/10 text-primary font-medium"
+                        ? "bg-primary-light text-primary-dark font-medium"
                         : "text-foreground hover:bg-muted",
                     )}
                   >
@@ -164,7 +101,6 @@ export function TopNavigation({
           </div>
           )}
 
-          {/* Profile menu */}
           <div ref={profileRef} className="relative">
             <button
               type="button"
@@ -172,7 +108,7 @@ export function TopNavigation({
                 setProfileOpen((p) => !p);
                 setLangOpen(false);
               }}
-              className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="flex size-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               aria-label="Profile menu"
             >
               <User className="size-4" aria-hidden="true" />
@@ -216,7 +152,7 @@ export function BottomNavigation({
 }) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-black/20 bg-black text-white backdrop-blur-sm fixed-bottom-safe lg:hidden"
+className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card/95 backdrop-blur-sm fixed-bottom-safe lg:hidden"
       aria-label="Main navigation"
     >
       <div className="mx-auto flex max-w-md items-center justify-around px-2 py-1.5">

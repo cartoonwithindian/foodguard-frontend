@@ -2,20 +2,22 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Home, Search, Clock, User, Database, Barcode } from "lucide-react";
+import { Home, Search, Clock, User, ScanLine, Database } from "lucide-react";
 
 import { DEFAULT_LANGUAGE_ID } from "@/data/languages";
 import { getDashboardLabels } from "@/data/dashboard-labels";
-import type { ScannedProduct } from "@/data/mock-data";
+import type { ScannedProduct } from "@/types/dashboard";
 import { useAuth } from "@/components/AuthProvider";
 import { WelcomeSection } from "@/components/dashboard/WelcomeSection";
 import { ScanHeroCard } from "@/components/dashboard/ScanHeroCard";
 import { SearchCard } from "@/components/dashboard/SearchCard";
-import { ProductOverview } from "@/components/dashboard/ProductOverview";
 import { RecentScans } from "@/components/dashboard/RecentScans";
 import { PersonalizedInsight } from "@/components/dashboard/PersonalizedInsight";
 import { HowItWorks } from "@/components/dashboard/HowItWorks";
 import { TrustFooter } from "@/components/dashboard/TrustFooter";
+import { QuickActions } from "@/components/dashboard/QuickActions";
+import { GamificationCard } from "@/components/dashboard/GamificationCard";
+import { DailyChallengePreview } from "@/components/challenges/DailyChallengePreview";
 import {
   TopNavigation,
   BottomNavigation,
@@ -35,8 +37,8 @@ function getInitialLang(): string {
 const NAV_ITEMS = [
   { key: "home", label: "Home", href: "/", Icon: Home },
   { key: "search", label: "Search", href: "/search", Icon: Search },
+  { key: "scan", label: "Scan", href: "/scan", Icon: ScanLine },
   { key: "history", label: "History", href: "/history", Icon: Clock },
-  { key: "benchmark", label: "Benchmark", href: "/benchmark", Icon: Barcode },
   { key: "data", label: "Data", href: "/data", Icon: Database },
   { key: "profile", label: "Profile", href: "/profile", Icon: User },
 ];
@@ -76,6 +78,7 @@ export function HomeDashboard() {
   const labels = getDashboardLabels(lang);
 
   const [userName, setUserName] = useState("Guest");
+  const [allergies, setAllergies] = useState<string[]>([]);
   const [recentScans, setRecentScans] = useState<ScannedProduct[]>([]);
   const [concernSummary, setConcernSummary] = useState({ high: 0, moderate: 0, low: 0 });
   const [preferences, setPreferences] = useState<{ goal: string; focuses: string[] }>({ goal: "", focuses: [] });
@@ -97,6 +100,7 @@ export function HomeDashboard() {
             const prefs = mePayload.data.preferences;
             if (prefs) {
               const goals = prefs.healthGoals ?? [];
+              setAllergies(prefs.allergies ?? []);
               setPreferences({
                 goal: goals[0] ? goals[0].replace(/_/g, " ") : "",
                 focuses: [
@@ -150,73 +154,68 @@ export function HomeDashboard() {
     }
   }, []);
 
-  const hasScans = recentScans.length > 0;
-
   return (
     <div className="flex min-h-screen flex-col bg-background pb-nav-safe lg:pb-0">
       <TopNavigation
-        items={NAV_ITEMS}
-        activeKey="home"
         currentLanguage={lang}
         onLanguageChange={handleLanguageChange}
       />
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        <div className="flex flex-col gap-6">
-          {/* Welcome + Scan Hero — full width */}
-          <section className="flex flex-col gap-5">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-5 sm:px-6 lg:px-10 lg:py-10">
+        <div className="flex flex-col gap-4 lg:gap-6">
+          <section className="lg:rounded-2xl lg:overflow-hidden">
             <WelcomeSection
               labels={labels.greeting}
               userName={userName}
-            />
-            <ScanHeroCard
-              labels={labels.scan}
-              onScan={() => router.push("/scan")}
+              allergies={allergies}
+              scanCount={recentScans.length}
+              healthyCount={concernSummary.low}
+              onProfile={() => router.push("/profile")}
+              onSettings={() => router.push("/profile")}
             />
           </section>
 
-          {/* Search + Product Overview — two columns */}
-          <section className="grid gap-5 lg:grid-cols-[1fr_320px]">
-            <div className="flex flex-col gap-5">
-              <SearchCard
-                labels={labels.search}
-                onClick={() => router.push("/search")}
+          <div className="flex flex-col gap-6">
+            <SearchCard
+              labels={labels.search}
+              onClick={() => router.push("/search")}
+            />
+            <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+              <ScanHeroCard
+                labels={labels.scan}
+                onScan={() => router.push("/scan")}
               />
-              <ProductOverview
-                labels={labels.summary}
-                summary={concernSummary}
-                onViewHistory={() => router.push("/history")}
-              />
+              <GamificationCard />
             </div>
+            <DailyChallengePreview />
+            <QuickActions />
+
             <div className="flex flex-col gap-5">
               <RecentScans
                 labels={labels.recentScans}
                 scans={recentScans}
                 onViewAll={() => router.push("/history")}
                 onScan={() => router.push("/scan")}
-                hasScans={hasScans}
+                hasScans={recentScans.length > 0}
               />
             </div>
-          </section>
 
-          {/* Personalized Insight — full width */}
-          <section>
-            <PersonalizedInsight
-              labels={labels.personalized}
-              preferences={preferences}
-              onEdit={() => router.push("/profile")}
-            />
-          </section>
+            <section>
+              <PersonalizedInsight
+                labels={labels.personalized}
+                preferences={preferences}
+                onEdit={() => router.push("/profile")}
+              />
+            </section>
 
-          {/* How It Works — full width */}
-          <section>
-            <HowItWorks labels={labels.howItWorks} />
-          </section>
+            <section>
+              <HowItWorks labels={labels.howItWorks} />
+            </section>
 
-          {/* Trust Footer */}
-          <section>
-            <TrustFooter message={labels.trust.message} />
-          </section>
+            <section className="pb-4">
+              <TrustFooter message={labels.trust.message} />
+            </section>
+          </div>
         </div>
       </main>
 

@@ -13,8 +13,8 @@ export function ChatHeader({ onNewChat, productName, brand }: ChatHeaderProps) {
   const context =
     productName || brand ? `${[brand, productName].filter(Boolean).join(" · ")}` : null;
   return (
-    <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-3xl items-center gap-3 px-3 py-3">
+    <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
+      <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:px-6">
         <Link
           href="/scan"
           className="inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"

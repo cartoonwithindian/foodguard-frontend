@@ -1,3 +1,5 @@
+// Profile option metadata only. Runtime profile values come from the
+// authenticated API or Firebase profile; these exports are intentionally empty.
 export type UserProfile = {
   id: string;
   name: string;
@@ -90,49 +92,29 @@ export const ANALYSIS_PREFERENCE_OPTIONS: AnalysisPreference[] = [
   { key: "comparison", label: "Product Comparison", enabled: true },
 ];
 
-export const MOCK_PROFILE: UserProfile = {
-  id: "usr-001",
-  name: "Anurag",
-  email: "anuraggod2007@gmail.com",
-  age: 24,
-  height: 175,
-  weight: 72,
-  memberSince: "2026-01-15",
+export const EMPTY_PROFILE: UserProfile = {
+  id: "",
+  name: "",
+  email: "",
+  age: null,
+  height: null,
+  weight: null,
+  memberSince: "",
   accountStatus: "active",
 };
 
-export const MOCK_GOAL: UserGoal = "improve_nutrition";
+export const EMPTY_ANALYSIS_PREFS: AnalysisPreference[] = ANALYSIS_PREFERENCE_OPTIONS.map((option) => ({
+  ...option,
+  enabled: false,
+}));
 
-export const MOCK_GOAL_PREFS: GoalSubPreference[] = [
-  { key: "lower_sugar", label: "Lower sugar", enabled: true },
-  { key: "lower_sodium", label: "Lower sodium", enabled: false },
-  { key: "higher_protein", label: "Higher protein", enabled: true },
-  { key: "higher_fibre", label: "Higher fibre", enabled: true },
-  { key: "more_vitamins", label: "More vitamins & minerals", enabled: false },
-];
-
-export const MOCK_PRODUCT_PREFS: ProductPreference[] = [
-  { id: "pp-1", type: "avoid", value: "Artificial colors" },
-  { id: "pp-2", type: "avoid", value: "High fructose corn syrup" },
-  { id: "pp-3", type: "prefer", value: "Whole grain ingredients" },
-  { id: "pp-4", type: "prefer", value: "Natural preservatives" },
-];
-
-export const MOCK_ANALYSIS_PREFS: AnalysisPreference[] = [
-  { key: "nutrition", label: "Nutrition", enabled: true },
-  { key: "ingredients", label: "Ingredients", enabled: true },
-  { key: "additives", label: "Additives", enabled: true },
-  { key: "evidence", label: "Evidence & Sources", enabled: false },
-  { key: "comparison", label: "Product Comparison", enabled: true },
-];
-
-export const MOCK_PRIVACY: PrivacySettings = {
-  keepScanHistory: true,
+export const EMPTY_PRIVACY: PrivacySettings = {
+  keepScanHistory: false,
 };
 
-export const MOCK_SECURITY: SecurityInfo = {
-  lastPasswordChange: "2026-06-01",
-  activeSessions: 2,
+export const EMPTY_SECURITY_INFO: SecurityInfo = {
+  lastPasswordChange: "",
+  activeSessions: 0,
   twoFactorEnabled: false,
-  linkedProviders: ["Google"],
+  linkedProviders: [],
 };

@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
 type TrustFooterProps = {
   message: string;
@@ -6,9 +6,9 @@ type TrustFooterProps = {
 
 export function TrustFooter({ message }: TrustFooterProps) {
   return (
-    <div className="flex items-center justify-center gap-2 rounded-xl border border-border bg-card/50 px-4 py-3">
-      <Info className="size-3.5 shrink-0 text-muted-foreground/60" aria-hidden="true" />
-      <p className="text-xs text-muted-foreground/70">{message}</p>
+    <div className="flex items-center justify-center gap-3 rounded-xl border border-primary/15 bg-primary-light/45 p-4 text-center">
+      <ShieldCheck className="size-5 shrink-0 text-primary" aria-hidden="true" />
+      <p className="text-xs leading-relaxed text-primary-dark">{message}</p>
     </div>
   );
 }

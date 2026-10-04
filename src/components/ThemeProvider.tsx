@@ -24,8 +24,9 @@ function applyThemeClass(resolved: "light" | "dark") {
 }
 
 function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "system";
-  return (localStorage.getItem("theme") as Theme) ?? "system";
+  // FoodGuard is designed as a light-mode product by default. Users can still
+  // explicitly select a theme from the existing toggle when desired.
+  return "light";
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {

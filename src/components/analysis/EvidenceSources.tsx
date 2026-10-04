@@ -19,7 +19,7 @@ export function EvidenceSources({
   if (sources.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <div className="foodguard-card flex flex-col gap-4 p-5">
       <div className="flex items-center gap-2">
         <BookOpen className="size-4 text-muted-foreground" aria-hidden="true" />
         <h3 className="text-base font-semibold text-foreground">{title}</h3>

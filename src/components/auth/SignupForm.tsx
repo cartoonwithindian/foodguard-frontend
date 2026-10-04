@@ -14,6 +14,7 @@ import { AuthDivider } from "@/components/auth/AuthDivider";
 import { SocialLoginButton } from "@/components/auth/SocialLoginButton";
 import { GoogleIcon } from "@/components/auth/GoogleIcon";
 import { apiUrl } from "@/lib/network/api-url";
+import { getLocalTimezone } from "@/services/gamification.service";
 
 type SignupFormProps = {
   labels: AuthLabels["signup"];
@@ -121,6 +122,7 @@ export function SignupForm({
           body: JSON.stringify({
             name: name.trim(),
             email: email.trim(),
+             timezone: getLocalTimezone(),
             password,
           }),
         });

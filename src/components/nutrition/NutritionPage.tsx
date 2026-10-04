@@ -1,7 +1,6 @@
 "use client";
 
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { NutritionProductDetail } from "@/data/nutrition-data";
 import { getNutritionLabels } from "@/data/nutrition-labels";
@@ -16,6 +15,7 @@ import { NutritionDataQuality } from "./NutritionDataQuality";
 import { NutritionSource } from "./NutritionSource";
 import { NutritionActions } from "./NutritionActions";
 import { apiUrl } from "@/lib/network/api-url";
+import { useSafeBack } from "@/lib/navigation/use-safe-back";
 
 type NutritionPageProps = {
   barcode: string;
@@ -46,7 +46,7 @@ function Header({
 }
 
 export function NutritionPage({ barcode, lang = "en" }: NutritionPageProps) {
-  const router = useRouter();
+  const goBack = useSafeBack(`/analysis?barcode=${encodeURIComponent(barcode)}`);
   const labels = getNutritionLabels(lang);
   const [product, setProduct] = useState<NutritionProductDetail | null>(null);
   const [loading, setLoading] = useState(!!barcode);
@@ -82,7 +82,7 @@ export function NutritionPage({ barcode, lang = "en" }: NutritionPageProps) {
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col bg-background">
-        <Header onBack={() => router.back()} title={labels.header.backToAnalysis} />
+        <Header onBack={goBack} title={labels.header.backToAnalysis} />
         <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 text-center">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="size-6 animate-spin text-muted-foreground" aria-hidden="true" />
@@ -97,7 +97,7 @@ export function NutritionPage({ barcode, lang = "en" }: NutritionPageProps) {
   if (error || !product) {
     return (
       <div className="flex min-h-screen flex-col bg-background">
-        <Header onBack={() => router.back()} title={labels.header.backToAnalysis} />
+        <Header onBack={goBack} title={labels.header.backToAnalysis} />
         <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 text-center">
           <p className="text-sm text-muted-foreground">
             {error ?? "Nutrition data not available for this product."}
@@ -114,7 +114,7 @@ export function NutritionPage({ barcode, lang = "en" }: NutritionPageProps) {
         <div className="mx-auto flex h-14 max-w-3xl items-center px-4">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={goBack}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />

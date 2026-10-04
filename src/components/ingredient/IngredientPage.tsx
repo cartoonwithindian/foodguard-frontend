@@ -14,6 +14,7 @@ import { ProductContext } from "./ProductContext";
 import { DataQuality } from "./DataQuality";
 import { RelatedIngredients } from "./RelatedIngredients";
 import { IngredientActions } from "./IngredientActions";
+import { useSafeBack } from "@/lib/navigation/use-safe-back";
 
 type IngredientPageProps = {
   ingredientId: string;
@@ -27,6 +28,9 @@ export function IngredientPage({
   lang = "en",
 }: IngredientPageProps) {
   const router = useRouter();
+  const goBack = useSafeBack(
+    productBarcode ? `/analysis?barcode=${encodeURIComponent(productBarcode)}` : "/",
+  );
   const labels = getIngredientLabels(lang);
   const ingredient = lookupIngredient(ingredientId);
 
@@ -41,7 +45,7 @@ export function IngredientPage({
           <div className="mx-auto flex h-14 max-w-3xl items-center px-4">
             <button
               type="button"
-              onClick={() => router.back()}
+              onClick={goBack}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <ArrowLeft className="size-4" aria-hidden="true" />
@@ -63,7 +67,7 @@ export function IngredientPage({
         <div className="mx-auto flex h-14 max-w-3xl items-center px-4">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={goBack}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />

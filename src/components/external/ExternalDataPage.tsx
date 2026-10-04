@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { ArrowLeft, Search, ExternalLink, Loader2, ShieldAlert } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useSafeBack } from "@/lib/navigation/use-safe-back";
 
 type ProviderKey = "usda" | "fda" | "pubchem" | "who" | "off";
 
@@ -30,7 +30,7 @@ function formatBody(body: unknown): string {
 }
 
 export function ExternalDataPage() {
-  const router = useRouter();
+  const goBack = useSafeBack("/");
   const [active, setActive] = useState<ProviderKey>("usda");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -116,7 +116,7 @@ export function ExternalDataPage() {
         <div className="mx-auto flex h-14 max-w-3xl items-center px-4">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={goBack}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />

@@ -39,9 +39,9 @@ export const CONCERN_COLORS: Record<
   ConcernLevel,
   { bg: string; text: string; dot: string }
 > = {
-  high: { bg: "bg-red-50 dark:bg-red-950/40", text: "text-red-700 dark:text-red-400", dot: "bg-red-500" },
-  moderate: { bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-700 dark:text-amber-400", dot: "bg-amber-500" },
-  low: { bg: "bg-green-50 dark:bg-green-950/40", text: "text-green-700 dark:text-green-400", dot: "bg-green-600" },
+  high: { bg: "bg-rose-50", text: "text-rose-700", dot: "bg-rose-500" },
+  moderate: { bg: "bg-amber-50", text: "text-amber-800", dot: "bg-amber-600" },
+  low: { bg: "bg-green-50", text: "text-green-800", dot: "bg-green-600" },
 };
 
 export const MOCK_USER: DashboardUser = {

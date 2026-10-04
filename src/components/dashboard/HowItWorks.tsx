@@ -7,29 +7,37 @@ type HowItWorksProps = {
   labels: DashboardLabels["howItWorks"];
 };
 
+const stepColors = [
+  "bg-primary",
+  "bg-primary/80",
+  "bg-primary/60",
+  "bg-primary/45",
+];
 const stepIcons = [ScanLine, Cpu, Lightbulb, GitCompare];
 
 export function HowItWorks({ labels }: HowItWorksProps) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-      <h2 className="mb-5 text-base font-semibold text-foreground">{labels.title}</h2>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <section className="foodguard-card p-5 sm:p-6">
+      <h2 className="text-lg font-semibold tracking-tight text-foreground">{labels.title}</h2>
+      <div className="mt-6 grid grid-cols-2 gap-5 sm:grid-cols-4">
         {labels.steps.map((step, i) => {
           const Icon = stepIcons[i] ?? ScanLine;
           return (
             <div key={step.number} className="flex flex-col items-center text-center">
-              <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-primary/10">
-                <Icon className="size-5 text-primary" aria-hidden="true" />
+              <div
+                className={`mb-3 flex size-12 items-center justify-center rounded-2xl text-white ${stepColors[i] ?? stepColors[0]}`}
+              >
+                <Icon className="size-5" aria-hidden="true" />
               </div>
-              <span className="text-xs font-bold text-primary/60">{step.number}</span>
-              <p className="mt-1 text-sm font-medium text-foreground">{step.label}</p>
-              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+              <span className="text-[10px] font-bold tracking-[0.14em] text-primary">{step.number}</span>
+              <p className="mt-1 text-sm font-semibold text-foreground">{step.label}</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 {step.description}
               </p>
             </div>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

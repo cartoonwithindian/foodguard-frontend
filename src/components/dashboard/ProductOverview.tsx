@@ -20,7 +20,7 @@ const levels: {
     key: "high",
     icon: AlertTriangle,
     colors: {
-      card: "border-red-200 bg-red-50/50 dark:border-red-900/50 dark:bg-red-950/40",
+      card: "border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40",
       icon: "text-red-600 dark:text-red-400",
       text: "text-red-700 dark:text-red-400",
     },
@@ -29,7 +29,7 @@ const levels: {
     key: "moderate",
     icon: Minus,
     colors: {
-      card: "border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/40",
+      card: "border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/40",
       icon: "text-amber-600 dark:text-amber-400",
       text: "text-amber-700 dark:text-amber-400",
     },
@@ -38,7 +38,7 @@ const levels: {
     key: "low",
     icon: CheckCircle,
     colors: {
-      card: "border-green-200 bg-green-50/50 dark:border-green-900/50 dark:bg-green-950/40",
+      card: "border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-950/40",
       icon: "text-green-600 dark:text-green-400",
       text: "text-green-700 dark:text-green-400",
     },
@@ -58,14 +58,14 @@ export function ProductOverview({ labels, summary, onViewHistory }: ProductOverv
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-      <h2 className="mb-4 text-base font-semibold text-foreground">{labels.title}</h2>
+    <div className="rounded-xl bg-card p-4 shadow-sm sm:p-5">
+      <h2 className="mb-4 text-base font-medium text-foreground">{labels.title}</h2>
       <div className="grid grid-cols-3 gap-3">
         {levels.map(({ key, icon: Icon, colors }) => (
           <div
             key={key}
             className={cn(
-              "flex flex-col items-center rounded-xl border p-4 text-center",
+              "flex flex-col items-center rounded-lg border p-3 text-center",
               colors.card,
             )}
           >
@@ -85,7 +85,7 @@ export function ProductOverview({ labels, summary, onViewHistory }: ProductOverv
       <button
         type="button"
         onClick={onViewHistory}
-        className="mt-4 w-full rounded-xl border border-border bg-card py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        className="mt-4 w-full rounded-xl border border-border bg-card py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
       >
         {labels.viewButton}
       </button>

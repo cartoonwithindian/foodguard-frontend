@@ -10,13 +10,23 @@ type PageProps = {
     brand?: string;
     ocrText?: string;
     ocrConfidence?: string;
+    scan_event_id?: string;
     lang?: string;
   }>;
 };
 
 export default async function AnalysisRoute({ searchParams }: PageProps) {
-  const { barcode, ingredients, imageUrl, productName, brand, ocrText, ocrConfidence, lang } =
-    await searchParams;
+  const {
+    barcode,
+    ingredients,
+    imageUrl,
+    productName,
+    brand,
+    ocrText,
+    ocrConfidence,
+    scan_event_id,
+    lang,
+  } = await searchParams;
 
   const confidence =
     typeof ocrConfidence === "string" && ocrConfidence.trim() !== ""
@@ -33,6 +43,7 @@ export default async function AnalysisRoute({ searchParams }: PageProps) {
         brand={brand ?? ""}
         ocrText={ocrText ?? ""}
         ocrConfidence={Number.isFinite(confidence) ? confidence : null}
+        scanEventId={scan_event_id}
         lang={lang}
       />
     </AuthGuard>

@@ -22,6 +22,7 @@ import { ScanError } from "./ScanError";
 import { ScanTips } from "./ScanTips";
 import { ProductNotFound } from "./ProductNotFound";
 import { OfflineIndicator } from "@/components/offline/OfflineIndicator";
+import { createScanEventId } from "@/services/gamification.service";
 
 const RESOLUTION_SOURCE_LABELS: Record<string, string> = {
   local_cache: "From saved data",
@@ -89,16 +90,18 @@ export function ScannerPage({ lang = "en", initialScreen = "identify" }: Scanner
       setExtracted(null);
       return;
     }
-    if (screen === "identify") {
-      router.push("/");
-    } else {
+if (screen !== "identify") {
       setScreen("identify");
+      return;
     }
-  }, [resolution, screen, router]);
+    router.push("/");
+  }, [resolution, router, screen]);
 
   const openAnalysis = useCallback(
     (product: IdentifiedProduct, extra?: ExtractedInfo | null) => {
-      router.push(buildAnalysisPath(product, extra ?? undefined));
+      router.push(
+        buildAnalysisPath(product, extra ?? undefined, undefined, createScanEventId()),
+      );
     },
     [router],
   );
@@ -132,12 +135,12 @@ export function ScannerPage({ lang = "en", initialScreen = "identify" }: Scanner
         const product = resolution.product;
         return (
           <div className="flex flex-col gap-5">
-            <div className="flex flex-col gap-5 rounded-2xl border border-green-200 bg-green-50 p-6 shadow-sm dark:border-green-900/50 dark:bg-green-950/40">
+            <div className="foodguard-card flex flex-col gap-5 border-primary/20 bg-primary-light/45 p-6 sm:p-7">
               <div className="flex items-start gap-3">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-green-100 dark:bg-green-900/50">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/80 text-primary">
                   <CheckCircle2 className="size-5 text-green-600 dark:text-green-400" aria-hidden="true" />
                 </div>
-                <h3 className="pt-2 text-base font-semibold text-green-800 dark:text-green-300">
+                <h3 className="pt-2 text-base font-semibold text-primary-dark">
                   {labels.barcode.productFound.title}
                 </h3>
               </div>
@@ -390,7 +393,7 @@ export function ScannerPage({ lang = "en", initialScreen = "identify" }: Scanner
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">{renderScreen()}</main>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 lg:py-10">{renderScreen()}</main>
     </div>
   );
 }

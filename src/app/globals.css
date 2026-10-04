@@ -1,20 +1,39 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f7f5;
-  --foreground: #1c1c1a;
+  --font-size: 14px;
+  --background: #f7faf8;
+  --foreground: #17221d;
   --card: #ffffff;
-  --card-foreground: #1c1c1a;
-  --muted: #efefec;
-  --muted-foreground: #5c5c58;
-  --border: #e3e3df;
-  --primary: #166534;
+  --card-foreground: #17221d;
+  --popover: #ffffff;
+  --popover-foreground: #17221d;
+  --primary: #16a36a;
   --primary-foreground: #ffffff;
-  --ring: #166534;
-  --destructive: #dc2626;
+  --primary-hover: #128a5a;
+  --primary-dark: #087a50;
+  --primary-light: #ddf7eb;
+  --secondary: #eef7f2;
+  --secondary-foreground: #176b4c;
+  --muted: #eef7f2;
+  --muted-foreground: #5f6f67;
+  --accent: #ddf7eb;
+  --accent-foreground: #087a50;
+  --destructive: #d94a4a;
   --destructive-foreground: #ffffff;
+/* Local override kept from the responsive/safe-area work. */
   --accent: #f0fdf4;
   --accent-foreground: #166534;
+
+  --border: #e2ece6;
+  --input: #d6e4dd;
+  --input-background: #ffffff;
+  --ring: #16a36a;
+  --sidebar: #10231c;
+  --sidebar-foreground: #b9c8c1;
+  --sidebar-active: #176b4c;
+  --radius: 0.75rem;
+  --foodguard-shadow: 0 4px 16px rgba(16, 35, 28, 0.06);
 
   /* Safe-area insets reported by the edge-to-edge WebView (viewport-fit=cover). */
   --safe-area-top: env(safe-area-inset-top, 0px);
@@ -26,20 +45,25 @@
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #e4e4e3;
-  --card: #141414;
-  --card-foreground: #e4e4e3;
-  --muted: #1e1e1e;
-  --muted-foreground: #8a8a88;
-  --border: #2a2a2a;
-  --primary: #34d399;
-  --primary-foreground: #0a0a0a;
-  --ring: #34d399;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --accent: #052e16;
-  --accent-foreground: #34d399;
+  --background: #0f1d17;
+  --foreground: #eef7f2;
+  --card: #162a21;
+  --card-foreground: #eef7f2;
+  --popover: #162a21;
+  --popover-foreground: #eef7f2;
+  --primary: #36c98b;
+  --primary-foreground: #062117;
+  --secondary: #1d3b2e;
+  --secondary-foreground: #dff7eb;
+  --muted: #1b3329;
+  --muted-foreground: #a8c2b5;
+  --accent: #244b3a;
+  --accent-foreground: #dff7eb;
+  --destructive: #ff8a8a;
+  --destructive-foreground: #2b0b0b;
+  --border: #294638;
+  --input: #3a5a4a;
+  --ring: #36c98b;
 }
 
 @theme inline {
@@ -47,24 +71,79 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-light: var(--primary-light);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
+  --color-input: var(--input);
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-active: var(--sidebar-active);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    font-size: var(--font-size);
+    background: var(--background);
+  }
+
+  body {
+    min-width: 320px;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .foodguard-card {
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: var(--card);
+    box-shadow: var(--foodguard-shadow);
+  }
+
+  .foodguard-eyebrow {
+    color: var(--muted-foreground);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .foodguard-scrollbar {
+    scrollbar-color: #cfe0d7 transparent;
+    scrollbar-width: thin;
+  }
 }
 
 /*
