@@ -1,5 +1,6 @@
 import type { ChatAction, ChatSourceRef } from "@/types/chat";
 import type { ChallengeCompletion } from "@/services/challenge.service";
+import { apiUrl } from "@/lib/network/api-url";
 
 export type ChatMessageView = {
   id: string;
@@ -90,14 +91,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export function sendChatMessage(input: {
   message: string;
   productId?: string | null;
+  productName?: string | null;
   conversationId?: string | null;
   barcode?: string | null;
 }): Promise<ChatSendResponse> {
-  return request<ChatSendResponse>("/api/chat", {
+  return request<ChatSendResponse>(apiUrl("/api/chat"), {
     method: "POST",
     body: JSON.stringify({
       message: input.message,
       product_id: input.productId ?? null,
+      product_name: input.productName ?? null,
       conversation_id: input.conversationId ?? null,
       barcode: input.barcode ?? null,
     }),
@@ -106,6 +109,6 @@ export function sendChatMessage(input: {
 
 export function fetchChatHistory(conversationId: string): Promise<ChatHistoryResponse> {
   return request<ChatHistoryResponse>(
-    `/api/chat?conversation_id=${encodeURIComponent(conversationId)}`,
+    apiUrl(`/api/chat?conversation_id=${encodeURIComponent(conversationId)}`),
   );
 }

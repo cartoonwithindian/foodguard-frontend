@@ -168,3 +168,131 @@ describe("fetchChatHistory", () => {
     expect(url).toContain("conversation_id=conv-x");
   });
 });
+
+/**
+ * Split-deployment regression.
+ *
+ * `apiUrl()` resolves `NEXT_PUBLIC_API_URL` once at module load, so each case
+ * resets the module registry and re-imports the client. Without this the chat
+ * client kept requesting a relative `/api/chat`, which the deployed frontend
+ * answered with its own 404 (or a store-backed 500) instead of the backend's
+ * working endpoint.
+ */
+describe("split-origin deployment", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  async function loadClientWithBase(base: string | undefined) {
+    if (base === undefined) {
+      vi.stubEnv("NEXT_PUBLIC_API_URL", "");
+    } else {
+      vi.stubEnv("NEXT_PUBLIC_API_URL", base);
+    }
+    vi.resetModules();
+    return import("@/lib/chat-client");
+  }
+
+  function captureUrl(payload: unknown) {
+    const seen: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(async (u: string) => {
+        seen.push(String(u));
+        return new Response(JSON.stringify(payload), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+    return seen;
+  }
+
+  const SEND_OK = {
+    success: true,
+    data: {
+      answer: "ok",
+      sources: [],
+      actions: [],
+      conversation_id: "conv-1",
+      metadata: { intent: "PRODUCT_EXPLANATION", model_version: "v2" },
+    },
+  };
+
+  const HISTORY_OK = { success: true, data: { conversation_id: "conv-1", messages: [] } };
+
+  it("sends chat to the backend origin when NEXT_PUBLIC_API_URL is set", async () => {
+    const { sendChatMessage } = await loadClientWithBase("https://backend.example.onrender.com");
+    const urls = captureUrl(SEND_OK);
+
+    await sendChatMessage({ message: "hi" });
+
+    expect(urls).toHaveLength(1);
+    expect(urls[0]).toBe("https://backend.example.onrender.com/api/chat");
+  });
+
+  it("reads chat history from the backend origin", async () => {
+    const { fetchChatHistory } = await loadClientWithBase("https://backend.example.onrender.com");
+    const urls = captureUrl(HISTORY_OK);
+
+    await fetchChatHistory("conv-1");
+
+    expect(urls[0]).toBe(
+      "https://backend.example.onrender.com/api/chat?conversation_id=conv-1",
+    );
+  });
+
+  it("keeps requests same-origin when the variable is unset (local dev)", async () => {
+    const { sendChatMessage, fetchChatHistory } = await loadClientWithBase(undefined);
+    const urls = captureUrl(SEND_OK);
+
+    await sendChatMessage({ message: "hi" });
+    expect(urls[0]).toBe("/api/chat");
+
+    const historyUrls = captureUrl(HISTORY_OK);
+    await fetchChatHistory("conv-2");
+    expect(historyUrls[0]).toBe("/api/chat?conversation_id=conv-2");
+  });
+
+  it("does not emit a double slash when the base has a trailing slash", async () => {
+    const { sendChatMessage } = await loadClientWithBase(
+      "https://backend.example.onrender.com/",
+    );
+    const urls = captureUrl(SEND_OK);
+
+    await sendChatMessage({ message: "hi" });
+
+    expect(urls[0]).toBe("https://backend.example.onrender.com/api/chat");
+    expect(urls[0]).not.toContain(".com//api");
+  });
+
+  it("still forwards the Authorization header to the cross-origin backend", async () => {
+    const { sendChatMessage } = await loadClientWithBase("https://backend.example.onrender.com");
+    // `getToken()` returns null unless `window` exists, and this suite runs in
+    // the node environment, so the browser global has to be stubbed explicitly.
+    const tokens: Record<string, string> = { "foodgaurd-token": "split-token" };
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (k: string) => tokens[k] ?? null,
+        setItem: () => {},
+        removeItem: () => {},
+      },
+    });
+    let auth: unknown = null;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(async (_u: string, init: RequestInit) => {
+        auth = (init.headers as Record<string, string>).Authorization;
+        return new Response(JSON.stringify(SEND_OK), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    await sendChatMessage({ message: "hi" });
+
+    expect(auth).toBe("Bearer split-token");
+  });
+});
