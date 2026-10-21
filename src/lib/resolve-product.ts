@@ -28,6 +28,7 @@ import { lookupOfflineByBarcode, searchOfflineByName } from "@/lib/offline/local
 import { httpJson } from "@/lib/network/request-manager";
 import { apiUrl } from "@/lib/network/api-url";
 import { isOnline, NETWORK_TIMEOUTS } from "@/lib/network/network-status";
+import { getFoodGuardAuthHeaders } from "@/services/gamification.service";
 import { canCompressClientSide, compressImageForUpload } from "@/lib/image/compress";
 import { logger } from "@/lib/logger";
 
@@ -103,9 +104,55 @@ export type ScanLabelResponse = {
     confidence: number;
   };
   sources?: string[];
+  /**
+   * Top-K visually similar products returned by the hosted CLIP+FAISS service.
+   * The backend already populates this (and lists "visual_search" in `sources`),
+   * but the client used to drop it on the floor, so an image upload with no
+   * readable barcode or OCR text degraded to `not_found`.
+   */
+  similarProducts?: {
+    rank: number;
+    productName: string;
+    productId: string;
+    score: number;
+    imagePath?: string | null;
+  }[] | null;
   rawText?: string;
   error?: string;
 };
+
+/** One CLIP+FAISS similarity hit, as returned by both visual-search paths. */
+type VisualMatch = {
+  rank: number;
+  productName: string;
+  productId: string;
+  score: number;
+  imagePath?: string | null;
+};
+
+/** Map one visual-search hit into a candidate {@link IdentifiedProduct}. */
+function productFromVisualMatch(match: VisualMatch): IdentifiedProduct {
+  return {
+    id: match.productId,
+    barcode: "",
+    name: match.productName,
+    brand: "",
+    category: "food",
+    source: "photo_ocr",
+    sourceDetail: "visual_search",
+    // L2 distance, not a 0..1 probability. Map the useful band into a
+    // presentational confidence so the UI does not render "100%".
+    confidence: Math.max(0.05, Math.min(0.95, 1 - match.score / 100)),
+  };
+}
+
+/** All visual matches as candidates, best match first. */
+function visualCandidates(matches: VisualMatch[] | null | undefined): IdentifiedProduct[] {
+  if (!Array.isArray(matches) || matches.length === 0) return [];
+  return matches
+    .filter((m) => m && typeof m.productName === "string" && m.productName.trim())
+    .map(productFromVisualMatch);
+}
 
 function friendlyError(op: string): string {
   return `We couldn't ${op} right now. Please check your connection and try again.`;
@@ -367,6 +414,66 @@ function fromCandidates(
  * The image is compressed on-device before upload (adaptive target by network
  * quality) — never uploading a raw multi-MB frame on a slow connection.
  */
+/**
+ * Resolve a product from a direct image URL.
+ *
+ * Hits `POST /api/visual-search-url`, which validates the URL (http(s) only,
+ * public hosts, no credentials) and asks the hosted CLIP+FAISS service for the
+ * nearest product images. Returns the matches as candidates -- the user picks
+ * one, because a visual match is a guess, not an identification.
+ */
+export async function resolveProductByImageUrl(
+  imageUrl: string,
+  topK = 8,
+): Promise<ProductResolution> {
+  const trimmed = imageUrl.trim();
+  if (!/^https?:\/\/[^\s]+$/i.test(trimmed)) {
+    return {
+      status: "error",
+      message: "Please enter a full http(s) image link.",
+    };
+  }
+
+  try {
+    const response = await httpJson(apiUrl("/api/visual-search-url"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getFoodGuardAuthHeaders(),
+      },
+      body: JSON.stringify({ image_url: trimmed, top_k: topK }),
+      timeoutMs: NETWORK_TIMEOUTS.upload,
+    });
+    const json = (await response.json().catch(() => null)) as {
+      success?: boolean;
+      data?: { results?: VisualMatch[] } | null;
+      error?: { message?: string } | null;
+    } | null;
+
+    if (!response.ok || !json?.success) {
+      const message =
+        json?.error?.message ??
+        "We couldn't search that image link right now. Please try again.";
+      return { status: "error", message };
+    }
+
+    const candidates = visualCandidates(json.data?.results);
+    if (candidates.length === 0) {
+      return { status: "not_found", query: trimmed };
+    }
+    const extracted: ExtractedInfo = { imageUrl: trimmed };
+    if (candidates.length === 1) {
+      return { status: "resolved", product: candidates[0], extracted };
+    }
+    return { status: "candidates", candidates, query: trimmed, extracted };
+  } catch {
+    return {
+      status: "error",
+      message: "We couldn't search that image link right now. Please check your connection.",
+    };
+  }
+}
+
 export async function resolveProductByPhoto(
   file: Blob | File,
 ): Promise<{ resolution: ProductResolution; extracted: ExtractedInfo }> {
@@ -418,6 +525,7 @@ export async function resolveProductByPhoto(
       rawText?: string;
       ingredientsText?: string;
       productName?: string;
+      imageUrl?: string | null;
     }) | null;
 
     if (!response.ok || !json?.success) {
@@ -436,6 +544,10 @@ export async function resolveProductByPhoto(
     extracted.nutrition = json.nutrition ?? null;
     extracted.ocrConfidence = json.ocr?.confidence ?? undefined;
     extracted.needsReview = json.ocr?.needsReview ?? false;
+    // The backend hosts the uploaded photo at a short-lived same-origin URL
+    // (10-minute TTL) so the analysis page can show the user the exact image
+    // they scanned.
+    extracted.imageUrl = json.imageUrl ?? extracted.imageUrl ?? undefined;
 
     const nameGuess = guessProductName(ocrText, json.product?.name);
     extracted.productName = nameGuess || undefined;
@@ -446,11 +558,28 @@ export async function resolveProductByPhoto(
       return { resolution, extracted };
     }
 
+    // Visually similar products from the hosted CLIP+FAISS service. These are a
+    // *fallback* for when text matching cannot identify the product -- they are
+    // never preferred over a real barcode or name match.
+    const similar = visualCandidates(json.similarProducts);
+    const similarResolution = (): ProductResolution => {
+      const [best, ...rest] = similar;
+      if (similar.length === 1) {
+        return { status: "resolved", product: best, extracted };
+      }
+      return { status: "candidates", candidates: similar, extracted };
+    };
+
     // 2. No barcode but OCR gave a name -> run name matching.
     if (nameGuess) {
       const resolution = await searchProductCandidates(nameGuess);
       if (resolution.status === "candidates" || resolution.status === "resolved") {
         return { resolution: { ...resolution, extracted }, extracted };
+      }
+      // Name matching found nothing, but the image may still look like a known
+      // product -- offer the visual matches instead of dead-ending.
+      if (similar.length > 0) {
+        return { resolution: similarResolution(), extracted };
       }
       return {
         resolution: { status: "not_found", query: nameGuess, extracted },
@@ -458,7 +587,13 @@ export async function resolveProductByPhoto(
       };
     }
 
-    // 3. Nothing usable detected.
+    // 3. No barcode and no usable name. Visual similarity is the last chance to
+    //    identify the product before giving up.
+    if (similar.length > 0) {
+      return { resolution: similarResolution(), extracted };
+    }
+
+    // 4. Nothing usable detected and nothing visually similar.
     return {
       resolution: {
         status: "not_found",

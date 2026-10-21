@@ -42,12 +42,6 @@ export type PrivacySettings = {
   keepScanHistory: boolean;
 };
 
-export type SecurityInfo = {
-  lastPasswordChange: string;
-  activeSessions: number;
-  twoFactorEnabled: boolean;
-  linkedProviders: string[];
-};
 
 export const GOAL_OPTIONS: { key: UserGoal; label: string; description: string }[] = [
   { key: "maintain_weight", label: "Maintain Weight", description: "Keep your current weight while making informed product choices" },
@@ -112,9 +106,3 @@ export const EMPTY_PRIVACY: PrivacySettings = {
   keepScanHistory: false,
 };
 
-export const EMPTY_SECURITY_INFO: SecurityInfo = {
-  lastPasswordChange: "",
-  activeSessions: 0,
-  twoFactorEnabled: false,
-  linkedProviders: [],
-};

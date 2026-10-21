@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { MoreHorizontal, Eye, Trash2 } from "lucide-react";
-import { CATEGORY_LABELS, CONCERN_COLORS } from "@/data/mock-data";
+import { CATEGORY_LABELS, CONCERN_COLORS } from "@/data/product-display";
 import type { HistoryLabels } from "@/data/history-labels";
 import type { HistoryItem } from "@/data/history-data";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ArrowLeft, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
@@ -22,7 +22,6 @@ import {
   EMPTY_PROFILE,
   EMPTY_ANALYSIS_PREFS,
   EMPTY_PRIVACY,
-  EMPTY_SECURITY_INFO,
   type UserProfile,
   type UserGoal,
   type GoalSubPreference,
@@ -63,7 +62,7 @@ export function ProfilePage({ lang = "en" }: ProfilePageProps) {
   const router = useRouter();
   const goBack = useSafeBack("/");
   const t = getProfileLabels(lang);
-  const { firebaseMode, firebaseUser, logout } = useAuth();
+  const { firebaseMode, firebaseUser, logout, clerkMode } = useAuth();
 
   const [profile, setProfile] = useState<UserProfile>(EMPTY_PROFILE);
   const [goal, setGoal] = useState<UserGoal>(null);
@@ -71,6 +70,9 @@ export function ProfilePage({ lang = "en" }: ProfilePageProps) {
   const [productPrefs, setProductPrefs] = useState<ProductPreference[]>([]);
   const [analysisPrefs, setAnalysisPrefs] = useState<AnalysisPreference[]>(EMPTY_ANALYSIS_PREFS);
   const [privacy, setPrivacy] = useState<PrivacySettings>(EMPTY_PRIVACY);
+  // Marks that the server's analysis-pref view has been applied once, so a
+  // user who saved preferences keeps them on later profile loads.
+  const analysisPrefsHydrated = useRef(false);
   const [language, setLanguage] = useState(lang);
 
   useEffect(() => {
@@ -108,11 +110,32 @@ export function ProfilePage({ lang = "en" }: ProfilePageProps) {
         if (backendGoal && ["maintain_weight", "weight_loss", "weight_gain", "improve_nutrition", "general_awareness"].includes(backendGoal)) {
           setGoal(backendGoal as UserGoal);
         }
-        const backendGoalPrefs = (me.preferences?.sensitivityPreferences ?? []).map((value) => ({
-          key: value,
-          label: value.replaceAll("_", " "),
-          enabled: true,
+        const storedSensitivities = me.preferences?.sensitivityPreferences ?? [];
+        // Analysis preferences ride in the same array under an `analysis:`
+        // namespace; split them out so the sensitivity toggles stay clean.
+        const analysisKeys = storedSensitivities
+          .filter((value) => value.startsWith("analysis:"))
+          .map((value) => value.slice("analysis:".length));
+        if (analysisKeys.length > 0 || analysisPrefsHydrated.current) {
+          setAnalysisPrefs(
+            EMPTY_ANALYSIS_PREFS.map((pref) => ({
+              ...pref,
+              enabled: analysisKeys.includes(pref.key),
+            })),
+          );
+        }
+        analysisPrefsHydrated.current = true;
+        setPrivacy((prev) => ({
+          ...prev,
+          keepScanHistory: !storedSensitivities.includes("keepScanHistory=false"),
         }));
+        const backendGoalPrefs = storedSensitivities
+          .filter((value) => !value.startsWith("analysis:") && value !== "keepScanHistory=false")
+          .map((value) => ({
+            key: value,
+            label: value.replaceAll("_", " "),
+            enabled: true,
+          }));
         setGoalPrefs(backendGoalPrefs);
         setProductPrefs([
           ...(me.preferences?.avoidIngredients ?? []).map((value, index) => ({
@@ -215,13 +238,49 @@ export function ProfilePage({ lang = "en" }: ProfilePageProps) {
     });
   }, [persistBackendPreferences]);
 
-  const handleSaveAnalysisPrefs = useCallback((prefs: AnalysisPreference[]) => {
-    setAnalysisPrefs(prefs);
-  }, []);
+  /*
+   * Analysis preferences persist in the backend's `sensitivityPreferences`
+   * array under an `analysis:` key namespace. The backend accepts up to 20
+   * free-form strings there, so no schema/migration change is needed, and the
+   * personalization pipeline can read them alongside sensitivity flags.
+   */
+  const ANALYSIS_PREF_PREFIX = "analysis:";
 
-  const handleSavePrivacy = useCallback((settings: PrivacySettings) => {
-    setPrivacy(settings);
-  }, []);
+  const handleSaveAnalysisPrefs = useCallback(
+    (prefs: AnalysisPreference[]) => {
+      setAnalysisPrefs(prefs);
+      // Replace only our namespaced entries; preserve user sensitivity flags.
+      const enabled = prefs
+        .filter((pref) => pref.enabled)
+        .map((pref) => `${ANALYSIS_PREF_PREFIX}${pref.key}`);
+      persistBackendPreferences({
+        sensitivityPreferences: [
+          ...goalPrefs.filter((pref) => !pref.key.startsWith(ANALYSIS_PREF_PREFIX)).map((pref) => pref.key),
+          ...enabled,
+        ],
+      });
+    },
+    [persistBackendPreferences, goalPrefs],
+  );
+
+  /*
+   * `keepScanHistory` maps to the backend's own history-save decision: when
+   * disabled, analyses are recorded with source "history_optout" and the
+   * history service skips persisting them (verified server-side, not just
+   * hidden client-side).
+   */
+  const handleSavePrivacy = useCallback(
+    (settings: PrivacySettings) => {
+      setPrivacy(settings);
+      persistBackendPreferences({
+        sensitivityPreferences: goalPrefs
+          .filter((pref) => pref.key !== "keepScanHistory")
+          .map((pref) => pref.key)
+          .concat(settings.keepScanHistory ? [] : ["keepScanHistory=false"]),
+      });
+    },
+    [persistBackendPreferences, goalPrefs],
+  );
 
   const handleLanguageChange = useCallback(
     (langId: string) => {
@@ -239,7 +298,7 @@ export function ProfilePage({ lang = "en" }: ProfilePageProps) {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-md">
+      <header className="sticky top-14 z-30 lg:top-0 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4 sm:px-6">
           <button
             type="button"
@@ -303,8 +362,8 @@ export function ProfilePage({ lang = "en" }: ProfilePageProps) {
         />
 
         <SecuritySection
-          info={EMPTY_SECURITY_INFO}
           labels={t.security}
+          authProvider={clerkMode ? "clerk" : firebaseMode ? "firebase" : "jwt"}
         />
 
         <AccountActionsSection

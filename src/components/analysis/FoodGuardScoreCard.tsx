@@ -16,30 +16,39 @@ const COMPONENT_LABELS: Record<string, { label: string; icon: string }> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  available: "text-[#16a36a]",
-  derived: "text-[#176b4c]",
-  insufficient: "text-[#e5a11a]",
+  available: "text-status-good",
+  derived: "text-primary-dark",
+  insufficient: "text-status-moderate",
 };
 
 function getScoreBarColor(score: number): string {
-  if (score >= 4) return "bg-[#16a36a]";
-  if (score >= 3) return "bg-[#4bbd8b]";
-  if (score >= 2) return "bg-[#e5a11a]";
-  if (score >= 1) return "bg-[#e86a3a]";
-  return "bg-[#d94a4a]";
+  if (score >= 4) return "bg-status-good";
+  if (score >= 3) return "bg-primary/70";
+  if (score >= 2) return "bg-status-moderate";
+  if (score >= 1) return "bg-status-concern";
+  return "bg-status-high-risk";
 }
 
 export function FoodGuardScoreCard({ foodguardScore, confidenceLabel }: FoodGuardScoreCardProps) {
-  const { final_score, rating, confidence, components, positive_factors, negative_factors, explanation } = foodguardScore;
+  const { final_score, rating, confidence, components, positive_factors, negative_factors, explanation, missing_data } = foodguardScore;
+
+  // When both core inputs are absent every component score is a fallback
+  // constant, not a measurement of this product. Showing "3.9 / 5 Good" then is
+  // misleading, so the number is withheld rather than presented as a verdict.
+  const missing = new Set(missing_data ?? []);
+  const hasCoreData = !(missing.has("nutrition") && missing.has("ingredients"));
+  const componentStatuses = Object.values(components).map((c) => c.status);
+  const unscorable =
+    !hasCoreData || componentStatuses.every((s) => s === "insufficient");
 
   const overallColor =
     final_score >= 4
-      ? "text-[#16a36a]"
+      ? "text-status-good"
       : final_score >= 3
-        ? "text-[#4bbd8b]"
+        ? "text-primary-dark"
         : final_score >= 2
-          ? "text-[#e5a11a]"
-          : "text-[#d94a4a]";
+          ? "text-status-moderate"
+          : "text-status-high-risk";
 
   return (
     <div className="foodguard-card p-6">
@@ -50,22 +59,58 @@ export function FoodGuardScoreCard({ foodguardScore, confidenceLabel }: FoodGuar
 
       {/* Main score */}
       <div className="mb-6 flex flex-col items-center gap-2">
-        <div className="flex items-baseline gap-1">
-          <span className={`text-5xl font-bold ${overallColor}`}>{final_score.toFixed(1)}</span>
-          <span className="text-lg text-muted-foreground">/ 5</span>
-        </div>
-        <span className={`text-sm font-medium ${overallColor}`}>{rating}</span>
+        {unscorable ? (
+          <>
+            <span className="text-2xl font-semibold text-muted-foreground">
+              Not enough data
+            </span>
+            <span className="text-sm text-muted-foreground">
+              No score is shown for this product
+            </span>
+          </>
+        ) : (
+          <>
+            <div className="flex items-baseline gap-1">
+              <span className={`text-5xl font-bold ${overallColor}`}>{final_score.toFixed(1)}</span>
+              <span className="text-lg text-muted-foreground">/ 5</span>
+            </div>
+            <span className={`text-sm font-medium ${overallColor}`}>{rating}</span>
+          </>
+        )}
       </div>
+
+      {/* Why no score, or what was assumed */}
+      {unscorable ? (
+        <div className="mb-5 flex items-start gap-2 rounded-xl bg-muted/50 px-4 py-2.5">
+          <AlertCircle className="mt-0.5 size-4 shrink-0 text-status-moderate" aria-hidden="true" />
+          <span className="text-xs leading-relaxed text-muted-foreground">
+            Missing {missing_data.join(" and ")}. Scores for individual components
+            would be default placeholders rather than measurements of this product,
+            so they are withheld.
+          </span>
+        </div>
+      ) : missing_data.length > 0 && (
+        <div className="mb-5 flex items-start gap-2 rounded-xl bg-muted/50 px-4 py-2.5">
+          <AlertCircle className="mt-0.5 size-4 shrink-0 text-status-moderate" aria-hidden="true" />
+          <span className="text-xs leading-relaxed text-muted-foreground">
+            Provisional: {missing_data.join(" and ")} unavailable, so part of this
+            score relies on defaults.
+          </span>
+        </div>
+      )}
 
       {/* Confidence */}
-      <div className="mb-5 flex items-center gap-2 rounded-xl bg-muted/50 px-4 py-2.5">
-        <Info className="size-4 text-muted-foreground" aria-hidden="true" />
-        <span className="text-xs text-muted-foreground">
-          {confidenceLabel}: <span className="font-medium text-foreground">{Math.round(confidence * 100)}%</span>
-        </span>
-      </div>
+      {!unscorable && (
+        <div className="mb-5 flex items-center gap-2 rounded-xl bg-muted/50 px-4 py-2.5">
+          <Info className="size-4 text-muted-foreground" aria-hidden="true" />
+          <span className="text-xs text-muted-foreground">
+            {confidenceLabel}: <span className="font-medium text-foreground">{Math.round(confidence * 100)}%</span>
+          </span>
+        </div>
+      )}
 
       {/* Four component scores */}
+      {!unscorable && (
       <div className="mb-5 space-y-3">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Component Scores
@@ -100,19 +145,21 @@ export function FoodGuardScoreCard({ foodguardScore, confidenceLabel }: FoodGuar
           );
         })}
       </div>
+      )}
 
-      {/* Positive and negative factors */}
-      {(positive_factors.length > 0 || negative_factors.length > 0) && (
+      {/* Positive and negative factors — these are derived from the component
+          scores, so they are withheld alongside an unscorable score. */}
+      {!unscorable && (positive_factors.length > 0 || negative_factors.length > 0) && (
         <div className="mb-4 space-y-3">
           {positive_factors.length > 0 && (
             <div>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-green-600 dark:text-green-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-status-good">
                 Positive Factors
               </h4>
               <ul className="space-y-1">
                 {positive_factors.map((factor, i) => (
                   <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                    <CheckCircle2 className="mt-0.5 size-3 shrink-0 text-green-500" aria-hidden="true" />
+                    <CheckCircle2 className="mt-0.5 size-3 shrink-0 text-status-good" aria-hidden="true" />
                     {factor}
                   </li>
                 ))}
@@ -121,13 +168,13 @@ export function FoodGuardScoreCard({ foodguardScore, confidenceLabel }: FoodGuar
           )}
           {negative_factors.length > 0 && (
             <div>
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-status-moderate">
                 Areas for Attention
               </h4>
               <ul className="space-y-1">
                 {negative_factors.map((factor, i) => (
                   <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                    <AlertCircle className="mt-0.5 size-3 shrink-0 text-amber-500" aria-hidden="true" />
+                    <AlertCircle className="mt-0.5 size-3 shrink-0 text-status-moderate" aria-hidden="true" />
                     {factor}
                   </li>
                 ))}

@@ -21,6 +21,11 @@
   --accent-foreground: #087a50;
   --destructive: #d94a4a;
   --destructive-foreground: #ffffff;
+  /* Status colors — shared by score, history, ingredients and badges. */
+  --status-good: #16a36a;
+  --status-moderate: #e5a11a;
+  --status-concern: #e86a3a;
+  --status-high-risk: #d94a4a;
   --border: #e2ece6;
   --input: #d6e4dd;
   --input-background: #ffffff;
@@ -67,6 +72,10 @@
   --accent-foreground: #dff7eb;
   --destructive: #ff8a8a;
   --destructive-foreground: #2b0b0b;
+  --status-good: #36c98b;
+  --status-moderate: #e5a11a;
+  --status-concern: #ef8a5c;
+  --status-high-risk: #ff8a8a;
   --border: #294638;
   --input: #3a5a4a;
   --ring: #36c98b;
@@ -93,6 +102,10 @@
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-status-good: var(--status-good);
+  --color-status-moderate: var(--status-moderate);
+  --color-status-concern: var(--status-concern);
+  --color-status-high-risk: var(--status-high-risk);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-sidebar: var(--sidebar);
@@ -152,6 +165,26 @@
   .foodguard-scrollbar {
     scrollbar-color: #cfe0d7 transparent;
     scrollbar-width: thin;
+  }
+}
+
+/*
+ * Respect the OS reduced-motion preference for every animation the global
+ * layer owns (the scan line and any transition utility using `motion-safe`).
+ * Components that ship their own keyframes opt out individually.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-scan-line {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
 

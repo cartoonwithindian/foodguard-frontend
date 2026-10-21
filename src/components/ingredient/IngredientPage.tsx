@@ -41,7 +41,7 @@ export function IngredientPage({
   if (!ingredient) {
     return (
       <div className="flex min-h-screen flex-col bg-background">
-        <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
+        <header className="sticky top-14 z-30 lg:top-0 border-b border-border bg-card/80 backdrop-blur-md">
           <div className="mx-auto flex h-14 max-w-3xl items-center px-4">
             <button
               type="button"
@@ -63,7 +63,7 @@ export function IngredientPage({
   return (
     <div className="min-h-screen bg-background pb-12">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
+      <header className="sticky top-14 z-30 lg:top-0 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-3xl items-center px-4">
           <button
             type="button"

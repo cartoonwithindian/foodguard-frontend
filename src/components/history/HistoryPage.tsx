@@ -2,11 +2,9 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Home, ScanLine, Search, Clock, User } from "lucide-react";
 import { getHistoryLabels } from "@/data/history-labels";
 import { getAnalysisLabels } from "@/data/analysis-labels";
 import {
-  getHistoryItems,
   getHistoryCounts,
   searchHistory,
   type HistoryItem,
@@ -20,10 +18,8 @@ import {
   firebaseDeleteHistory,
   type FirebaseHistoryItem,
 } from "@/lib/firebase/db";
-import {
-  TopNavigation,
-  BottomNavigation,
-} from "@/components/dashboard/Navigation";
+import { apiUrl } from "@/lib/network/api-url";
+import { ErrorState, LoadingState } from "@/components/ui/StateViews";
 import { HistorySummary } from "./HistorySummary";
 import { CategoryTabs } from "./CategoryTabs";
 import { HistorySearchBar } from "./HistorySearchBar";
@@ -34,14 +30,6 @@ import { EmptyHistoryState } from "./EmptyHistoryState";
 import { HistoryDetailView } from "./HistoryDetailView";
 
 type TabLevel = "all" | "high" | "moderate" | "low";
-
-const NAV_ITEMS = [
-  { key: "home", label: "Home", href: "/", Icon: Home },
-  { key: "scan", label: "Scan", href: "/scan?open=camera&mode=barcode", Icon: ScanLine },
-  { key: "search", label: "Search", href: "/search", Icon: Search },
-  { key: "history", label: "History", href: "/history", Icon: Clock },
-  { key: "profile", label: "Profile", href: "/profile", Icon: User },
-];
 
 const ASSESSMENTS: AssessmentLevel[] = ["low", "moderate", "high", "insufficient"];
 const CATEGORIES: ProductCategory[] = [
@@ -72,14 +60,76 @@ function toHistoryItem(doc: FirebaseHistoryItem): HistoryItem {
   };
 }
 
+type ApiHistoryEntry = {
+  id: string;
+  productId: string | null;
+  name: string;
+  brand?: string | null;
+  category?: string | null;
+  barcode?: string | null;
+  scannedAt: string;
+  assessment?: string | null;
+  score?: number | null;
+  source?: string | null;
+  analysis?: ProductAnalysisResult | null;
+};
+
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem("foodgaurd-token");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Map a real `/api/history` entry into the view model. The backend persists the
+ * full analysis snapshot, so the detail view works exactly as in Firebase mode.
+ */
+function toHistoryItemFromApi(entry: ApiHistoryEntry): HistoryItem {
+  const assessment = ASSESSMENTS.includes(entry.assessment as AssessmentLevel)
+    ? (entry.assessment as AssessmentLevel)
+    : "moderate";
+  const category = CATEGORIES.includes(entry.category as ProductCategory)
+    ? (entry.category as ProductCategory)
+    : "other";
+  return {
+    id: entry.id,
+    name: entry.name,
+    brand: entry.brand ?? "",
+    category,
+    barcode: entry.barcode ?? "",
+    scannedAt: new Date(entry.scannedAt).toISOString(),
+    assessment,
+    score: entry.score ?? 0,
+    analysis: (entry.analysis ?? {
+      id: entry.productId ?? entry.id,
+      name: entry.name,
+      brand: entry.brand ?? "",
+      category,
+      barcode: entry.barcode ?? "",
+      scanDate: new Date(entry.scannedAt).toLocaleDateString(),
+      assessment,
+      assessmentDescription: "",
+      score: entry.score ?? 0,
+      positivePoints: [],
+      attentionPoints: [],
+      ingredients: [],
+      alternativeSuggestions: [],
+      evidenceSources: [],
+    }) as ProductAnalysisResult,
+  };
+}
+
 export function HistoryPage({ lang = "en" }: { lang?: string }) {
   const router = useRouter();
   const labels = getHistoryLabels(lang);
   const analysisLabels = getAnalysisLabels(lang);
-  const { firebaseMode, firebaseUser } = useAuth();
-  const [activeNav, setActiveNav] = useState("history");
+  const { firebaseMode, firebaseUser, isLoading: authLoading } = useAuth();
 
-  const [items, setItems] = useState<HistoryItem[]>(() => getHistoryItems());
+  const [items, setItems] = useState<HistoryItem[]>([]);
+  const [loadState, setLoadState] = useState<"loading" | "loaded" | "error">("loading");
   const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabLevel>("all");
   const [filters, setFilters] = useState<HistoryFilter>({
@@ -89,18 +139,73 @@ export function HistoryPage({ lang = "en" }: { lang?: string }) {
   });
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [detailProduct, setDetailProduct] = useState<HistoryItem | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    if (!firebaseMode || !firebaseUser) return;
+    if (authLoading) return;
+
+    // Firebase mode reads the user's Firestore history directly.
+    if (firebaseMode) {
+      if (!firebaseUser) {
+        setItems([]);
+        setLoadState("loaded");
+        return;
+      }
+      setLoadState("loading");
+      let cancelled = false;
+      void firebaseListHistory(firebaseUser.uid)
+        .then((docs) => {
+          if (cancelled) return;
+          setItems(docs.map(toHistoryItem));
+          setLoadState("loaded");
+        })
+        .catch(() => {
+          if (!cancelled) setLoadState("error");
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    // JWT mode reads the real backend history endpoint.
+    const token = getToken();
+    if (!token) {
+      setItems([]);
+      setLoadState("loaded");
+      return;
+    }
     let cancelled = false;
-    void firebaseListHistory(firebaseUser.uid).then((docs) => {
-      if (cancelled) return;
-      setItems(docs.map(toHistoryItem));
-    });
+    const controller = new AbortController();
+    setLoadState("loading");
+    void (async () => {
+      try {
+        const response = await fetch(apiUrl("/api/history"), {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        const json = (await response.json()) as {
+          success: boolean;
+          data?: { history: ApiHistoryEntry[] };
+          error?: { message?: string } | null;
+        };
+        if (cancelled) return;
+        if (!response.ok || !json.success || !json.data) {
+          setLoadState("error");
+          return;
+        }
+        setItems(json.data.history.map(toHistoryItemFromApi));
+        setLoadState("loaded");
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (!cancelled) setLoadState("error");
+      }
+    })();
+
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, [firebaseMode, firebaseUser]);
+  }, [authLoading, firebaseMode, firebaseUser, retryCount]);
 
   const counts = getHistoryCounts(items);
 
@@ -109,16 +214,9 @@ export function HistoryPage({ lang = "en" }: { lang?: string }) {
     assessment: activeTab !== "all" ? activeTab : filters.assessment,
   });
 
-  const handleNav = useCallback(
-    (key: string) => {
-      setActiveNav(key);
-      if (key === "home") router.push("/");
-      else if (key === "scan") router.push("/scan?open=camera&mode=barcode");
-      else if (key === "search") router.push("/search");
-      else if (key === "profile") router.push("/profile");
-    },
-    [router],
-  );
+  const handleScan = useCallback(() => {
+    router.push("/scan");
+  }, [router]);
 
   const handleTabChange = useCallback((tab: TabLevel) => {
     setActiveTab(tab);
@@ -148,6 +246,16 @@ export function HistoryPage({ lang = "en" }: { lang?: string }) {
       setDeleteTarget(null);
       if (firebaseMode && firebaseUser) {
         void firebaseDeleteHistory(firebaseUser.uid, id);
+        return;
+      }
+      const token = getToken();
+      if (token) {
+        void fetch(apiUrl(`/api/history/${encodeURIComponent(id)}`), {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {
+          // Best-effort remote delete; the row is already gone locally.
+        });
       }
     },
     [firebaseMode, firebaseUser],
@@ -179,12 +287,7 @@ export function HistoryPage({ lang = "en" }: { lang?: string }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background pb-20 lg:pb-0">
-      <TopNavigation
-        items={NAV_ITEMS}
-        activeKey={activeNav}
-      />
-
+    <div className="flex min-h-screen flex-col bg-background">
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <div className="space-y-6">
           {/* Header */}
@@ -269,10 +372,19 @@ export function HistoryPage({ lang = "en" }: { lang?: string }) {
           />
 
           {/* Product list */}
-          {items.length === 0 ? (
+          {loadState === "loading" ? (
+            <LoadingState label="Loading your history…" rows={4} />
+          ) : loadState === "error" ? (
+            <ErrorState
+              title="Something went wrong"
+              description="We couldn't load your scan history. Please try again."
+              retryLabel="Try again"
+              onRetry={() => setRetryCount((c) => c + 1)}
+            />
+          ) : items.length === 0 ? (
             <EmptyHistoryState
               labels={labels.empty}
-              onScan={() => handleNav("scan")}
+              onScan={handleScan}
             />
           ) : filteredItems.length === 0 ? (
             <EmptyHistoryState
@@ -312,11 +424,6 @@ export function HistoryPage({ lang = "en" }: { lang?: string }) {
           onCancel={() => setDeleteTarget(null)}
         />
       )}
-
-      <BottomNavigation
-        items={NAV_ITEMS}
-        activeKey={activeNav}
-      />
     </div>
   );
 }

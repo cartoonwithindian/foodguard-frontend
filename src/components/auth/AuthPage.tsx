@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { SignInButton, useClerk } from "@clerk/nextjs";
 
 import { getAuthLabels, type AuthLabels } from "@/data/auth-labels";
+import { BrandMark } from "@/components/ui/BrandMark";
 import { AuthTabs, type AuthTab } from "@/components/auth/AuthTabs";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { SignupForm } from "@/components/auth/SignupForm";
@@ -29,9 +31,41 @@ export function AuthPage() {
   const [activeTab, setActiveTab] = useState<AuthTab>("login");
   const [labels] = useState<AuthLabels>(getInitialLabels);
   const router = useRouter();
-  const { login, firebaseMode, continueAsGuest: continueAsGuestFirebase } = useAuth();
+  const { login, firebaseMode, clerkMode, exchangeClerkSession, continueAsGuest: continueAsGuestFirebase } = useAuth();
+  const clerk = useClerk();
   const [guestLoading, setGuestLoading] = useState(false);
   const [guestError, setGuestError] = useState("");
+  const [clerkBusy, setClerkBusy] = useState(false);
+  const [clerkError, setClerkError] = useState("");
+
+  // Sign in through Clerk, then bridge the session into a FoodGuard JWT.
+  // The modal resolves asynchronously: poll briefly for the Clerk session the
+  // same way the provider does, then run the exchange.
+  const handleClerkSuccess = useCallback(async () => {
+    setClerkBusy(true);
+    setClerkError("");
+    try {
+      let session = clerk.session;
+      for (let waited = 0; !session && waited < 15_000; waited += 500) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        session = clerk.session;
+      }
+      if (!session) {
+        setClerkError("Sign-in didn't complete. Please try again.");
+        return;
+      }
+      const exchanged = await exchangeClerkSession();
+      if (!exchanged) {
+        setClerkError("Signed in, but we couldn't sync your account. Please retry.");
+        return;
+      }
+      router.push("/");
+    } catch {
+      setClerkError("Couldn't complete sign-in. Please try again.");
+    } finally {
+      setClerkBusy(false);
+    }
+  }, [clerk, exchangeClerkSession, router]);
 
   const continueAsGuest = useCallback(async () => {
     setGuestLoading(true);
@@ -65,44 +99,14 @@ export function AuthPage() {
     <div className="flex min-h-full flex-1 flex-col bg-background">
       <div className="flex flex-1 flex-col lg:flex-row">
         {/* Mobile/tablet: full-width form */}
-        {/* Desktop: side panel + form */}
-        <div className="hidden flex-1 items-center justify-center p-8 lg:flex">
+        {/* Desktop: branded side panel + form */}
+        <div className="hidden flex-1 items-center justify-center bg-secondary/50 p-8 lg:flex">
           <div className="max-w-sm text-center">
-            <div className="mx-auto mb-8 flex size-16 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/15">
-              <svg
-                viewBox="0 0 48 48"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="size-9 text-primary"
-                aria-hidden="true"
-              >
-                <path
-                  d="M24 8c-2.5 0-4.5 2-4.5 4.5v2.2c-6.2 1.4-10.5 7-10.5 13.3 0 7.7 6.3 14 14 14s14-6.3 14-14c0-6.3-4.3-11.9-10.5-13.3V12.5C28.5 10 26.5 8 24 8z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M20 22h8M24 18v8"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-                <circle
-                  cx="34"
-                  cy="34"
-                  r="7"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                <path
-                  d="M38.5 38.5L42 42"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
+            <div className="mx-auto mb-8 flex w-fit items-center gap-3">
+              <BrandMark className="size-12" iconClassName="size-6" />
+              <span className="text-2xl font-semibold tracking-tight text-foreground">
+                FoodGuard
+              </span>
             </div>
             <h2 className="text-xl font-semibold tracking-tight text-foreground">
               {labels.sidePanel.heading}
@@ -193,6 +197,35 @@ export function AuthPage() {
                 />
               )}
             </div>
+
+            {/* Clerk: primary third-party identity path when configured. */}
+            {clerkMode && (
+              <div className="mt-6">
+                {/* `useSignIn`-free variant: SignInButton with a plain child
+                    node keeps typing simple and opens the modal on click. */}
+                <SignInButton mode="modal">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleClerkSuccess();
+                    }}
+                    disabled={clerkBusy}
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover active:bg-primary-dark disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  >
+                    <Sparkles className="size-4" aria-hidden="true" />
+                    {clerkBusy ? "Signing you in…" : "Continue with secure sign-in"}
+                  </button>
+                </SignInButton>
+                {clerkError && (
+                  <p role="alert" className="mt-3 text-center text-xs text-red-600">
+                    {clerkError}
+                  </p>
+                )}
+                <p className="mt-2 text-center text-xs text-muted-foreground">
+                  Secured by Clerk
+                </p>
+              </div>
+            )}
 
             {/* Guest bypass: one tap, no email/password */}
             <div className="mt-8">

@@ -1,16 +1,49 @@
 "use client";
 
-import { Lock } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { SecurityInfo } from "@/data/profile-data";
+import { Lock, ShieldCheck } from "lucide-react";
 import type { ProfileLabels } from "@/data/profile-labels";
 
 type SecuritySectionProps = {
-  info: SecurityInfo;
   labels: ProfileLabels["security"];
+  /** "jwt" = email/password sessions; "clerk" = Clerk-managed identity. */
+  authProvider: "jwt" | "clerk" | "firebase";
 };
 
-export function SecuritySection({ info, labels }: SecuritySectionProps) {
+/**
+ * Security & sessions.
+ *
+ * This section previously rendered a fake 2FA toggle, an invented session
+ * count and a dead "change password" button. None of that state exists in the
+ * backend, so the section now states honestly how the account is secured and
+ * offers the real action available per auth provider.
+ */
+/**
+ * Clerk's account portal URL, derived from the publishable key at build time
+ * (no hardcoded instance URL in source). Falls back to Clerk's generic
+ * account page when the key cannot be decoded.
+ */
+function clerkAccountUrl(): string {
+  const key = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  if (!key) return "https://account.clerk.com";
+  const encoded = key.split("_")[2];
+  if (!encoded) return "https://account.clerk.com";
+  try {
+    // The domain part is terminated by Clerk's `$` delimiter — strip it.
+    const domain = Buffer.from(encoded, "base64").toString("utf8").split("$")[0].trim();
+    return domain.includes(".") ? `https://${domain}` : "https://account.clerk.com";
+  } catch {
+    return "https://account.clerk.com";
+  }
+}
+
+export function SecuritySection({ labels, authProvider }: SecuritySectionProps) {
+  const providerCopy =
+    authProvider === "clerk"
+      ? "Your sign-in, password and two-factor settings are managed by Clerk's secure authentication dashboard."
+      : authProvider === "firebase"
+        ? "Your sign-in, password and two-factor settings are managed by your Google account."
+        : "You sign in with an email and password. Sessions are secured with signed tokens that expire automatically.";
+
   return (
     <div className="foodguard-card p-5 sm:p-6">
       <div className="mb-4 flex items-center gap-3">
@@ -23,74 +56,22 @@ export function SecuritySection({ info, labels }: SecuritySectionProps) {
         </div>
       </div>
 
-      <div className="space-y-4">
-        {/* Change password */}
-        <div className="flex items-center justify-between rounded-xl border border-border p-3.5">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-foreground">{labels.changePassword}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {info.lastPasswordChange ? `${labels.lastChanged}: ${info.lastPasswordChange}` : "Not available"}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="rounded-xl border border-border bg-card px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-          >
-            {labels.changePassword}
-          </button>
-        </div>
-
-        {/* Two-factor auth */}
-        <div className="flex items-center justify-between rounded-xl border border-border p-3.5">
-          <div>
-            <p className="text-sm font-medium text-foreground">{labels.twoFactor}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {info.lastPasswordChange ? (info.twoFactorEnabled ? labels.twoFactorEnabled : labels.twoFactorDisabled) : "Not available"}
-            </p>
-          </div>
-          <div
-            className={cn(
-              "flex h-7 w-11 items-center rounded-full p-0.5 transition-colors",
-              info.twoFactorEnabled ? "bg-primary" : "bg-muted",
-            )}
-          >
-            <div
-              className={cn(
-                "size-6 rounded-full bg-white shadow-sm transition-transform",
-                info.twoFactorEnabled ? "translate-x-4" : "translate-x-0",
-              )}
-            />
-          </div>
-        </div>
-
-        {/* Active sessions */}
-        <div className="rounded-xl border border-border p-3.5">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-foreground">{labels.activeSessions}</p>
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-              {info.lastPasswordChange ? info.activeSessions : "—"}
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">{labels.sessionsCount}</p>
-        </div>
-
-        {/* Linked accounts */}
-        {info.linkedProviders.length > 0 && (
-          <div className="rounded-xl border border-border p-3.5">
-            <p className="text-sm font-medium text-foreground">{labels.linkedAccounts}</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {info.linkedProviders.map((provider) => (
-                <span
-                  key={provider}
-                  className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
-                >
-                  {provider}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+      <div className="flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-4">
+        <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+        <p className="text-sm leading-relaxed text-muted-foreground">{providerCopy}</p>
       </div>
+
+      {authProvider === "clerk" && (
+        <a
+          href={clerkAccountUrl()}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        >
+          <Lock className="size-4" aria-hidden="true" />
+          Manage sign-in settings
+        </a>
+      )}
     </div>
   );
 }

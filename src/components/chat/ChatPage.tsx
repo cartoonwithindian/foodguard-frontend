@@ -137,13 +137,20 @@ export function ChatPage({
   }, []);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
+    /*
+     * Full-height conversation. On mobile the app bar (h-14, rendered by
+     * AppShell) and the bottom tab bar sit outside this page, so the header
+     * hangs below the bar (top-14) and the page reserves the same space at
+     * its end for the tab bar — the input then always stays reachable and
+     * the transcript scrolls in its own region instead of the document.
+     */
+    <div className="flex h-dvh flex-col bg-background">
       <ChatHeader
         onNewChat={startNewChat}
         productName={productName}
         brand={brand}
       />
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-5 sm:px-6 lg:py-8">
+      <main className="mx-auto flex h-full w-full max-w-5xl flex-1 flex-col px-4 py-5 sm:px-6 lg:py-8">
         <div
           ref={listRef}
           className="flex flex-1 flex-col gap-3 overflow-y-auto py-4"

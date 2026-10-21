@@ -4,8 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Info, Loader2 } from "lucide-react";
 import Link from "next/link";
-import type { SearchProduct, UserCriteria } from "@/data/search-data";
-import { findAlternatives, SEARCH_SUGGESTIONS } from "@/data/search-data";
 import { getSearchLabels } from "@/data/search-labels";
 import {
   searchCatalogProducts,
@@ -16,14 +14,10 @@ import type { CatalogProductItem } from "@/lib/store/sqlite";
 import { useNetworkQuality } from "@/lib/network/use-network";
 import { IngredientInput } from "./IngredientInput";
 import { SearchSuggestions } from "./SearchSuggestions";
-import { SearchResultCard } from "./SearchResultCard";
 import { SortSelector } from "./SortSelector";
 import { RecentSearches } from "./RecentSearches";
 import { EmptySearchState } from "./EmptySearchState";
 import { SearchLoading } from "./SearchLoading";
-import { CriteriaSelector } from "./CriteriaSelector";
-import { AlternativeSection } from "./AlternativeSection";
-import { CompareView } from "./CompareView";
 import { ProductCard } from "@/components/catalog/ProductCard";
 import { cn } from "@/lib/utils";
 
@@ -31,9 +25,7 @@ type SearchPhase =
   | "idle"
   | "loading"
   | "results"
-  | "empty"
-  | "alternatives"
-  | "compare";
+  | "empty";
 
 type SearchPageProps = {
   lang?: string;
@@ -69,8 +61,6 @@ export function SearchPage({ lang = "en", initialQuery = "" }: SearchPageProps) 
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [alternativeResults, setAlternativeResults] = useState<SearchProduct[]>([]);
-  const [compareIds, setCompareIds] = useState<string[]>([]);
 
   const controllerRef = useRef<AbortController | null>(null);
   const initialHandledRef = useRef(false);
@@ -203,35 +193,8 @@ export function SearchPage({ lang = "en", initialQuery = "" }: SearchPageProps) 
     void runSearch(activeQuery, category, newSort);
   }
 
-  function handleSelectProduct(barcode: string) {
-    router.push(`/analysis?barcode=${encodeURIComponent(barcode)}`);
-  }
-
   function handleClearRecent() {
     setRecentSearches([]);
-  }
-
-  function handleCompareToggle(id: string) {
-    setCompareIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
-    );
-  }
-
-  function handleCompare() {
-    if (compareIds.length >= 2) setPhase("compare");
-  }
-
-  function handleCriteriaFind(criteria: UserCriteria) {
-    setPhase("loading");
-    setTimeout(() => {
-      const found = findAlternatives(criteria);
-      setAlternativeResults(found);
-      setPhase(found.length > 0 ? "alternatives" : "empty");
-    }, 500);
-  }
-
-  function handleBackFromCompare() {
-    setPhase(alternativeResults.length > 0 ? "alternatives" : "idle");
   }
 
   function handleEmptyReset() {
@@ -254,23 +217,9 @@ export function SearchPage({ lang = "en", initialQuery = "" }: SearchPageProps) 
     { value: "brand", label: labels.results.sortBrand },
   ];
 
-  const compareProducts = alternativeResults.filter((p) =>
-    compareIds.includes(p.id),
-  );
-
-  if (phase === "compare") {
-    return (
-      <CompareView
-        products={compareProducts.length >= 2 ? compareProducts : []}
-        labels={labels.comparison}
-        onBack={handleBackFromCompare}
-      />
-    );
-  }
-
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-14 z-30 lg:top-0 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-5xl items-center px-4">
           <Link
             href="/"
@@ -320,15 +269,6 @@ export function SearchPage({ lang = "en", initialQuery = "" }: SearchPageProps) 
               onSelect={(s) => {
                 doSearch(s);
               }}
-            />
-            <CriteriaSelector
-              title={labels.criteria.title}
-              subtitle={labels.criteria.subtitle}
-              findButton={labels.criteria.findButton}
-              avoidPlaceholder={labels.criteria.avoidPlaceholder}
-              preferPlaceholder={labels.criteria.preferPlaceholder}
-              customPlaceholder={labels.criteria.customPlaceholder}
-              onFind={handleCriteriaFind}
             />
 
             {categories.length > 0 && (
@@ -481,84 +421,6 @@ export function SearchPage({ lang = "en", initialQuery = "" }: SearchPageProps) 
                   </div>
                 )}
               </>
-            )}
-
-            <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/30 px-4 py-3">
-              <Info className="size-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden="true" />
-              <div>
-                <p className="text-xs font-semibold text-foreground">
-                  {labels.transparency.title}
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {labels.transparency.description}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Alternatives */}
-        {phase === "alternatives" && (
-          <div className="space-y-5">
-            <AlternativeSection
-              title={labels.alternatives.title}
-              description={labels.alternatives.description}
-              disclaimer={labels.alternatives.disclaimer}
-            />
-
-            {alternativeResults.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {alternativeResults.map((product) => (
-                  <SearchResultCard
-                    key={product.id}
-                    product={product}
-                    viewAnalysisLabel={labels.results.viewAnalysis}
-                    compareLabel={labels.results.compare}
-                    comparedLabel={labels.results.compared}
-                    whyMatchDetailLabel={labels.results.whyMatchDetail}
-                    matchLabels={{
-                      matchLabel: labels.results.matchLabel,
-                      whyMatch: labels.results.whyMatch,
-                      matchedIngredients: labels.results.matchedIngredients,
-                      missingIngredients: labels.results.missingIngredients,
-                    }}
-                    onSelect={handleSelectProduct}
-                    onCompareToggle={handleCompareToggle}
-                    isComparing={compareIds.includes(product.id)}
-                    canCompare={compareIds.length < 4}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptySearchState
-                title={labels.empty.title}
-                description={labels.empty.description}
-                clearFiltersLabel={labels.empty.clearFilters}
-                searchAgainLabel={labels.empty.searchAgain}
-                tryNameLabel={labels.empty.tryName}
-                scanBarcodeLabel={labels.empty.scan}
-                onScan={() => router.push("/scan?open=camera&mode=barcode")}
-                categoryTitle=""
-                popularTitle=""
-                categories={[]}
-                popularSearches={[]}
-                onClearFilters={handleEmptyReset}
-                onSearchAgain={handleEmptyReset}
-                onSelectCategory={() => {}}
-                onSelectPopular={() => {}}
-              />
-            )}
-
-            {compareIds.length >= 2 && (
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={handleCompare}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  {labels.comparison.compareButton} ({compareIds.length})
-                </button>
-              </div>
             )}
 
             <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/30 px-4 py-3">

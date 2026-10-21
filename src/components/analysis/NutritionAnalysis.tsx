@@ -53,7 +53,27 @@ export function NutritionAnalysis({
   return (
     <div className="foodguard-card p-5">
       <h3 className="text-base font-semibold text-foreground mb-4">{title}</h3>
-      <div className="overflow-hidden rounded-xl border border-border">
+      {/*
+        * Nutrient rows render as a definition-style list on phones (no table
+        * squeeze) and as a table from `sm` up. Both carry identical data.
+        */}
+      <div className="overflow-hidden rounded-xl border border-border sm:hidden">
+        <ul className="divide-y divide-border">
+          {rows.map((row) => (
+            <li key={row.label} className="flex items-baseline justify-between gap-3 px-4 py-2.5">
+              <span className="text-sm text-muted-foreground">{row.label}</span>
+              <span
+                className={`text-right text-sm font-medium ${
+                  row.highlight ? "text-foreground" : "text-foreground/80"
+                }`}
+              >
+                {row.value}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="hidden overflow-hidden rounded-xl border border-border sm:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">

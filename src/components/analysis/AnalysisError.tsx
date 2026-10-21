@@ -4,9 +4,9 @@ type AnalysisErrorProps = {
   title: string;
   description: string;
   tryAgainLabel: string;
-  viewIngredientsLabel: string;
+  viewIngredientsLabel?: string;
   onTryAgain: () => void;
-  onViewIngredients: () => void;
+  onViewIngredients?: () => void;
 };
 
 export function AnalysisError({
@@ -35,14 +35,16 @@ export function AnalysisError({
           <RefreshCw className="size-4" aria-hidden="true" />
           {tryAgainLabel}
         </button>
-        <button
-          type="button"
-          onClick={onViewIngredients}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-background px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-        >
-          <List className="size-4" aria-hidden="true" />
-          {viewIngredientsLabel}
-        </button>
+        {onViewIngredients && viewIngredientsLabel && (
+          <button
+            type="button"
+            onClick={onViewIngredients}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-background px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            <List className="size-4" aria-hidden="true" />
+            {viewIngredientsLabel}
+          </button>
+        )}
       </div>
     </div>
   );

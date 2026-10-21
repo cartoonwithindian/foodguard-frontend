@@ -133,7 +133,7 @@ export function FoodSafetyAssistant({
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-14 z-30 lg:top-0 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-3xl items-center px-4">
           <Link
             href={backHref}

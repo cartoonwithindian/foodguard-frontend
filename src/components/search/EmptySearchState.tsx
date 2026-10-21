@@ -1,7 +1,7 @@
 "use client";
 
 import { SearchX, RefreshCw, ScanLine } from "lucide-react";
-import type { ProductCategory } from "@/data/mock-data";
+import type { ProductCategory } from "@/data/product-display";
 
 type EmptySearchStateProps = {
   title: string;

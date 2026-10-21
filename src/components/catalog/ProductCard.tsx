@@ -14,6 +14,11 @@ type ProductCardProps = {
   product: CatalogProductItem;
   viewAnalysisLabel?: string;
   noImageLabel?: string;
+  /**
+   * Called when the photo fails to load. Lets the grid drop the product
+   * entirely in "Photos only" mode instead of showing a dead tile.
+   */
+  onImageError?: (product: CatalogProductItem) => void;
 };
 
 function initials(name: string): string {
@@ -29,6 +34,7 @@ export function ProductCard({
   product,
   viewAnalysisLabel = "View Analysis",
   noImageLabel = "No image",
+  onImageError,
 }: ProductCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -48,7 +54,10 @@ export function ProductCard({
             src={product.imageUrl}
             alt={product.name}
             loading="lazy"
-            onError={() => setImageFailed(true)}
+            onError={() => {
+              setImageFailed(true);
+              onImageError?.(product);
+            }}
             className="size-full object-cover"
           />
         ) : (

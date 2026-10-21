@@ -27,8 +27,13 @@ export const CATALOG_CACHE_VERSION = 1;
 export const CATALOG_FRESH_MS = 12 * 60 * 60 * 1000; // 12 hours considered fresh
 export const CATALOG_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // hard expiry ~30 days
 
-export function catalogCacheKey(search: string, category: string, sort: string): string {
-  return `catalog:${encodeURIComponent(search.trim().toLowerCase())}:${category}:${sort}`;
+export function catalogCacheKey(
+  search: string,
+  category: string,
+  sort: string,
+  hasImage = false,
+): string {
+  return `catalog:${encodeURIComponent(search.trim().toLowerCase())}:${category}:${sort}:img${hasImage ? 1 : 0}`;
 }
 
 class CatalogCache {
@@ -46,8 +51,9 @@ class CatalogCache {
     search: string,
     category: string,
     sort: string,
+    hasImage = false,
   ): Promise<CatalogCacheRecord | null> {
-    const key = catalogCacheKey(search, category, sort);
+    const key = catalogCacheKey(search, category, sort, hasImage);
     try {
       const record = await this.adapter.get<CatalogCacheRecord>(STORE_CATALOG, key);
       if (!record) return null;
@@ -67,6 +73,7 @@ class CatalogCache {
     sort: string,
     data: CatalogCacheValue,
     now = Date.now(),
+    hasImage = false,
   ): Promise<void> {
     const record: CatalogCacheRecord = {
       data,
@@ -75,7 +82,7 @@ class CatalogCache {
       expiresAt: now + CATALOG_EXPIRY_MS,
     };
     try {
-      await this.adapter.set(STORE_CATALOG, catalogCacheKey(search, category, sort), record);
+      await this.adapter.set(STORE_CATALOG, catalogCacheKey(search, category, sort, hasImage), record);
     } catch {
       /* ignore */
     }

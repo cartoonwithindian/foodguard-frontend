@@ -1,6 +1,6 @@
 "use client";
 
-import { CATEGORY_LABELS } from "@/data/mock-data";
+import { CATEGORY_LABELS } from "@/data/product-display";
 import type { NutritionProductDetail } from "@/data/nutrition-data";
 import type { NutritionLabels } from "@/data/nutrition-labels";
 

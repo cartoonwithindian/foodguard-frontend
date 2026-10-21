@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Inbox, Search, SlidersHorizontal, Loader2 } from "lucide-react";
+import { ArrowLeft, ImageIcon, Inbox, Search, SlidersHorizontal, Loader2 } from "lucide-react";
 import type { CatalogProductItem } from "@/lib/store/sqlite";
 import { catalogCache } from "@/lib/cache/catalog-cache";
 import { useNetworkQuality } from "@/lib/network/use-network";
@@ -54,6 +54,9 @@ export function ProductCatalogPage({
   const [search, setSearch] = useState(initialSearch);
   const [category, setCategory] = useState(initialCategory);
   const [sort, setSort] = useState(initialSort);
+  const [photosOnly, setPhotosOnly] = useState(false);
+  /** Photo URLs the browser rejected; hidden from the grid in Photos only mode. */
+  const [brokenPhotoIds, setBrokenPhotoIds] = useState<Set<string>>(new Set());
 
   const [products, setProducts] = useState<CatalogProductItem[]>([]);
   const [categories, setCategories] = useState<Array<{ key: string; label: string; count: number }>>([]);
@@ -72,7 +75,7 @@ export function ProductCatalogPage({
   const fetchPage = useCallback(
     async (
       pageNum: number,
-      opts: { searchQ: string; cat: string; sortBy: string; append: boolean },
+      opts: { searchQ: string; cat: string; sortBy: string; append: boolean; withImages: boolean },
     ) => {
       const controller = new AbortController();
       controllerRef.current?.abort();
@@ -85,6 +88,7 @@ export function ProductCatalogPage({
         sort: opts.sortBy,
       });
       if (opts.searchQ) params.set("search", opts.searchQ);
+      if (opts.withImages) params.set("hasImage", "true");
 
       const tryCache = pageNum === 1;
       if (!opts.append) {
@@ -94,7 +98,7 @@ export function ProductCatalogPage({
         setErrorMessage("");
       }
       if (tryCache) {
-        const cached = await catalogCache().get(opts.searchQ, opts.cat, opts.sortBy);
+        const cached = await catalogCache().get(opts.searchQ, opts.cat, opts.sortBy, opts.withImages);
         if (cached && cached.data.products.length > 0) {
           setProducts(cached.data.products);
           setTotal(cached.data.total);
@@ -119,6 +123,7 @@ export function ProductCatalogPage({
         setTotal(data.total);
         setDbTotal(data.dbTotal);
         setCategories(data.categories);
+        if (!opts.append) setBrokenPhotoIds(new Set());
         setPage(pageNum);
         pageRef.current = pageNum;
         setHasMore(data.hasMore);
@@ -132,7 +137,7 @@ export function ProductCatalogPage({
             dbTotal: data.dbTotal,
             categories: data.categories,
             fetchedAt: Date.now(),
-          });
+          }, Date.now(), opts.withImages);
         }
 } catch (error) {
         if (controller.signal.aborted) return;
@@ -156,30 +161,46 @@ export function ProductCatalogPage({
   // Wait for debounce to settle before fetching.
   useEffect(() => {
     const timer = setTimeout(() => {
-      void fetchPage(1, { searchQ: search, cat: category, sortBy: sort, append: false });
+      void fetchPage(1, { searchQ: search, cat: category, sortBy: sort, append: false, withImages: photosOnly });
     }, 0);
     return () => {
       clearTimeout(timer);
       controllerRef.current?.abort();
     };
 
-  }, [search, category, sort]);
+  }, [search, category, sort, photosOnly]);
 
   const loadMore = useCallback(() => {
     const next = pageRef.current + 1;
-    void fetchPage(next, { searchQ: search, cat: category, sortBy: sort, append: true });
-  }, [fetchPage, search, category, sort]);
+    void fetchPage(next, { searchQ: search, cat: category, sortBy: sort, append: true, withImages: photosOnly });
+  }, [fetchPage, search, category, sort, photosOnly]);
+
+  const visibleProducts = useMemo(
+    () => (photosOnly ? products.filter((p) => !brokenPhotoIds.has(p.id)) : products),
+    [products, photosOnly, brokenPhotoIds],
+  );
+
+  const handleImageError = useCallback((product: CatalogProductItem) => {
+    setBrokenPhotoIds((prev) => {
+      if (prev.has(product.id)) return prev;
+      const next = new Set(prev);
+      next.add(product.id);
+      return next;
+    });
+  }, []);
 
   const clearFilters = () => {
     setSearchInput("");
     setSearch("");
     setCategory("all");
     setSort("new");
+    setPhotosOnly(false);
+    setBrokenPhotoIds(new Set());
   };
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-14 z-30 lg:top-0 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-5xl items-center px-4">
           <Link
             href="/"
@@ -247,7 +268,22 @@ export function ProductCatalogPage({
                 ))}
               </select>
             </div>
-            {(search || category !== "all") && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={photosOnly}
+              onClick={() => setPhotosOnly((v) => !v)}
+              title="Only show products that have a photo"
+              className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
+                photosOnly
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border text-foreground hover:bg-muted"
+              }`}
+            >
+              <ImageIcon className="size-4" aria-hidden="true" />
+              <span className="whitespace-nowrap">Photos only</span>
+            </button>
+            {(search || category !== "all" || photosOnly) && (
               <button
                 type="button"
                 onClick={clearFilters}
@@ -324,7 +360,7 @@ export function ProductCatalogPage({
             <button
               type="button"
               onClick={() =>
-                fetchPage(1, { searchQ: search, cat: category, sortBy: sort, append: false })
+                fetchPage(1, { searchQ: search, cat: category, sortBy: sort, append: false, withImages: photosOnly })
               }
               className="mt-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
@@ -333,30 +369,50 @@ export function ProductCatalogPage({
           </div>
         )}
 
-        {phase === "ready" && products.length === 0 && (
+        {phase === "ready" &&
+          (products.length === 0 ||
+            (photosOnly && visibleProducts.length === 0)) && (
           <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-border px-6 py-16 text-center">
             <Inbox className="size-10 text-muted-foreground" aria-hidden="true" />
             <div>
-              <p className="text-base font-semibold text-foreground">No products found</p>
+              <p className="text-base font-semibold text-foreground">
+                {photosOnly && products.length > 0 ? "No photos loaded" : "No products found"}
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Try a different search term or clear your filters.
+                {photosOnly && products.length > 0
+                  ? "These products have photo links that failed to load. Load more to keep looking."
+                  : "Try a different search term or clear your filters."}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="mt-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              Clear filters
-            </button>
+            {photosOnly ? (
+              <button
+                type="button"
+                onClick={() => setPhotosOnly(false)}
+                className="mt-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                Show products without photos
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="mt-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         )}
 
-        {products.length > 0 && (
+        {visibleProducts.length > 0 && (
           <>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {visibleProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onImageError={photosOnly ? handleImageError : undefined}
+                />
               ))}
             </div>
 

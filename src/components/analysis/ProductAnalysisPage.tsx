@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ArrowLeft, MessagesSquare, Flame, Sparkles, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { ProductAnalysisResult } from "@/data/analysis-data";
 import { getAnalysisLabels } from "@/data/analysis-labels";
 import type { ProductSnapshot } from "@/types/food-safety-assistant";
@@ -10,7 +11,10 @@ import { useAuth } from "@/components/AuthProvider";
 import { firebaseAddHistory } from "@/lib/firebase/db";
 import { ProductHeader } from "./ProductHeader";
 import { AssessmentCard } from "./AssessmentCard";
+import { JevAssessmentCard } from "./JevAssessmentCard";
 import { FoodGuardScoreCard } from "./FoodGuardScoreCard";
+import { AllergensSection } from "./AllergensSection";
+import { AIExplanationCard } from "./AIExplanationCard";
 import { PositivePoints } from "./PositivePoints";
 import { AttentionPoints } from "./AttentionPoints";
 import { IngredientAnalysisSection } from "./IngredientAnalysisSection";
@@ -68,8 +72,17 @@ export function ProductAnalysisPage({
 }: ProductAnalysisPageProps) {
   const labels = getAnalysisLabels(lang);
   const { firebaseMode, firebaseUser } = useAuth();
+  const router = useRouter();
   const [phase, setPhase] = useState<AnalysisPhase>("loading");
   const [product, setProduct] = useState<ProductAnalysisResult | null>(null);
+  const [allergens, setAllergens] = useState<
+    Array<{
+      allergen: string;
+      type: "contains" | "may_contain" | "processed_in_facility";
+      confidence: number;
+      evidence: string;
+    }> | undefined
+  >(undefined);
   const [attempt, setAttempt] = useState(0);
   const [reward, setReward] = useState<GamificationActivityResult | null>(null);
   const [completedChallenge, setCompletedChallenge] = useState<ChallengeCompletion | null>(null);
@@ -102,6 +115,7 @@ export function ProductAnalysisPage({
        setReward(null);
        setCompletedChallenge(null);
       setProduct(null);
+      setAllergens(undefined);
       const trimmedBarcode = barcode.trim();
       const trimmedIngredients = ingredients.trim();
       const trimmedName = productName.trim();
@@ -166,6 +180,12 @@ export function ProductAnalysisPage({
           success: boolean;
           data?: ProductAnalysisResult;
            meta?: {
+             allergens?: Array<{
+               allergen: string;
+               type: "contains" | "may_contain" | "processed_in_facility";
+               confidence: number;
+               evidence: string;
+             }> | null;
              gamification?: {
                xp_awarded: number;
                total_xp: number;
@@ -192,6 +212,9 @@ export function ProductAnalysisPage({
           return;
         }
         setProduct(json.data);
+        // Allergens ride on the analyze response meta (undefined = no data,
+        // empty = none detected).
+        setAllergens(json.meta?.allergens ?? undefined);
         setPhase("result");
         if (cacheKey) void analysisCache().save(cacheKey, json.data);
 
@@ -287,7 +310,7 @@ export function ProductAnalysisPage({
   if (phase === "loading") {
     return (
       <div className="flex min-h-dvh flex-col bg-background">
-        <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+        <header className="sticky top-14 z-30 lg:top-0 border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="mx-auto flex h-14 max-w-5xl items-center px-4">
             <Link
               href="/scan"
@@ -310,9 +333,10 @@ export function ProductAnalysisPage({
   }
 
   if (phase === "error" || !product) {
+    const hasStaleProduct = product != null;
     return (
       <div className="flex min-h-dvh flex-col bg-background">
-        <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+        <header className="sticky top-14 z-30 lg:top-0 border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="mx-auto flex h-14 max-w-5xl items-center px-4">
             <Link
               href="/scan"
@@ -328,9 +352,15 @@ export function ProductAnalysisPage({
             title={labels.error.title}
             description={labels.error.description}
             tryAgainLabel={labels.error.tryAgain}
-            viewIngredientsLabel={labels.error.viewIngredients}
-            onTryAgain={handleTryAgain}
-            onViewIngredients={() => setPhase("result")}
+            viewIngredientsLabel={
+              hasStaleProduct ? labels.error.viewIngredients : undefined
+            }
+            onTryAgain={
+              hasStaleProduct ? handleTryAgain : () => router.push("/scan")
+            }
+            onViewIngredients={
+              hasStaleProduct ? () => setPhase("result") : undefined
+            }
           />
         </main>
       </div>
@@ -346,9 +376,16 @@ export function ProductAnalysisPage({
 
   const assessmentData = assessmentLabels[product.assessment] ?? assessmentLabels.low;
 
+  // Mirrors FoodGuardScoreCard's rule: with both core inputs missing, every
+  // component score is a default constant, so nothing derived from the score
+  // (explanation, factors) is trustworthy enough to show.
+  const missingScoreInput = new Set(product.foodguardScore?.missing_data ?? []);
+  const scoreIsUnscorable =
+    missingScoreInput.has("nutrition") && missingScoreInput.has("ingredients");
+
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-14 z-30 lg:top-0 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-5xl items-center px-4">
           <Link
             href="/scan"
@@ -377,7 +414,9 @@ export function ProductAnalysisPage({
                 category={product.category}
                 barcode={product.barcode}
                 scanDate={product.scanDate}
-                imageUrl={product.imageUrl}
+                // The user's own upload (short-lived /api/temp URL) is shown
+                // when present, falling back to the resolved product photo.
+                imageUrl={imageUrl || product.imageUrl || undefined}
                 backButton={labels.header.backButton}
                 scanDateLabel={labels.header.scanDate}
               />
@@ -387,10 +426,26 @@ export function ProductAnalysisPage({
                 description={assessmentData.description}
                 score={product.score}
               />
+              {product.jevDecision && (
+                <JevAssessmentCard
+                  decision={product.jevDecision}
+                  analysisConfidence={product.confidence}
+                />
+              )}
               {product.foodguardScore && (
                 <FoodGuardScoreCard
                   foodguardScore={product.foodguardScore}
                   confidenceLabel="Analysis Confidence"
+                />
+              )}
+              <AllergensSection title="Allergens" allergens={allergens} />
+              {/* The stored explanation is generated from the component scores,
+                  so it must not be presented as evidence-based when those
+                  scores are default placeholders. */}
+              {!scoreIsUnscorable && (
+                <AIExplanationCard
+                  explanation={product.foodguardScore?.explanation ?? ""}
+                  note="This explanation is generated by FoodGuard's scoring pipeline from verified ingredient evidence. It is informational and not medical advice."
                 />
               )}
               <PositivePoints

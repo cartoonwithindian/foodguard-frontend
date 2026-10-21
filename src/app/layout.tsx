@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/components/AuthProvider";
 import { AppShell } from "@/components/layout/AppShell";
@@ -34,12 +35,22 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans">
-        <FirebaseAnalytics />
-        <ThemeProvider>
-          <AuthProvider>
-            <AppShell>{children}</AppShell>
-          </AuthProvider>
-        </ThemeProvider>
+        <ClerkProvider
+          appearance={{
+            variables: {
+              colorPrimary: "#16a36a",
+              colorBackground: "#ffffff",
+              borderRadius: "0.75rem",
+            },
+          }}
+        >
+          <FirebaseAnalytics />
+          <ThemeProvider>
+            <AuthProvider>
+              <AppShell>{children}</AppShell>
+            </AuthProvider>
+          </ThemeProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

@@ -13,8 +13,8 @@ export function ChatHeader({ onNewChat, productName, brand }: ChatHeaderProps) {
   const context =
     productName || brand ? `${[brand, productName].filter(Boolean).join(" · ")}` : null;
   return (
-    <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:px-6">
+    <header className="sticky top-14 z-30 lg:top-0 border-b border-border bg-background/95 backdrop-blur">
+      <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-2 sm:px-6">
         <Link
           href="/scan"
           className="inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
@@ -25,6 +25,8 @@ export function ChatHeader({ onNewChat, productName, brand }: ChatHeaderProps) {
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
           <MessagesSquare className="h-5 w-5" />
         </div>
+        {/* Back arrow targets the scan flow on product chats; the shell bar
+            above stays the global way home. */}
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-base font-semibold leading-tight">FoodGuard AI</h1>
           <p className="truncate text-xs text-muted-foreground">

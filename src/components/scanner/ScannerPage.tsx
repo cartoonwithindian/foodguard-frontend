@@ -178,7 +178,12 @@ export function ScannerPage({ lang = "en", initialScreen = "identify" }: Scanner
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
                   type="button"
-                  onClick={() => openAnalysis(product, resolution.extracted ?? extracted)}
+                  onClick={() =>
+                    openAnalysis(product, {
+                      ...extracted,
+                      ...resolution.extracted,
+                    })
+                  }
                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
                   {labels.barcode.productFound.analyzeButton}
@@ -332,7 +337,7 @@ export function ScannerPage({ lang = "en", initialScreen = "identify" }: Scanner
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-14 z-30 lg:top-0 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <button
             type="button"

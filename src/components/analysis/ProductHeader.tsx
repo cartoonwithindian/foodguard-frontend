@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeft, Clock } from "lucide-react";
 import Link from "next/link";
-import type { ProductCategory } from "@/data/mock-data";
-import { CATEGORY_LABELS } from "@/data/mock-data";
+import type { ProductCategory } from "@/data/product-display";
+import { CATEGORY_LABELS } from "@/data/product-display";
 
 type ProductHeaderProps = {
   name: string;
@@ -28,6 +28,17 @@ export function ProductHeader({
   scanDateLabel,
 }: ProductHeaderProps) {
   const [imageFailed, setImageFailed] = useState(false);
+  // The API returns a raw ISO timestamp; render a readable date instead of
+  // leaking "2026-10-03T01:17:49.307Z" into the UI.
+  const displayScanDate = useMemo(() => {
+    const parsed = new Date(scanDate);
+    if (Number.isNaN(parsed.getTime())) return scanDate;
+    return parsed.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }, [scanDate]);
   const initials = name
     .split(/\s+/)
     .filter(Boolean)
@@ -68,7 +79,7 @@ export function ProductHeader({
           )}
           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
             <Clock className="size-3" aria-hidden="true" />
-            {scanDateLabel}: {scanDate}
+            {scanDateLabel}: {displayScanDate}
           </div>
         </div>
       </div>

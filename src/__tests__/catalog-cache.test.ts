@@ -52,8 +52,29 @@ describe("catalog cache", () => {
   });
 
   it("keys are stable and encode the full query", () => {
-    expect(catalogCacheKey("  AMUL ", "dairy", "new")).toBe("catalog:amul:dairy:new");
-    expect(catalogCacheKey("amul", "dairy", "new")).toBe("catalog:amul:dairy:new");
+    expect(catalogCacheKey("  AMUL ", "dairy", "new")).toBe("catalog:amul:dairy:new:img0");
+    expect(catalogCacheKey("amul", "dairy", "new")).toBe("catalog:amul:dairy:new:img0");
+  });
+
+  it("keys separate photos-only from the unfiltered catalog", () => {
+    // Otherwise toggling the filter would serve the other mode's cached page.
+    expect(catalogCacheKey("amul", "dairy", "new", true)).not.toBe(
+      catalogCacheKey("amul", "dairy", "new", false),
+    );
+  });
+
+  it("does not serve a photos-only entry for an unfiltered read", async () => {
+    const cache = catalogCache();
+    await cache.save(
+      "amul",
+      "dairy",
+      "new",
+      { products: [], total: 3, dbTotal: 3, categories: [], fetchedAt: Date.now() },
+      Date.now(),
+      true,
+    );
+    expect(await cache.get("amul", "dairy", "new", true)).not.toBeNull();
+    expect(await cache.get("amul", "dairy", "new", false)).toBeNull();
   });
 
   it("does not serve expired entries", async () => {

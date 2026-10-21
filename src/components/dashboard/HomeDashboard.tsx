@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Home, Search, Clock, User, ScanLine } from "lucide-react";
 
 import { DEFAULT_LANGUAGE_ID } from "@/data/languages";
 import { getDashboardLabels } from "@/data/dashboard-labels";
@@ -16,11 +15,8 @@ import { HowItWorks } from "@/components/dashboard/HowItWorks";
 import { TrustFooter } from "@/components/dashboard/TrustFooter";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { GamificationCard } from "@/components/dashboard/GamificationCard";
+import { RecentScansCard } from "@/components/dashboard/RecentScansCard";
 import { DailyChallengePreview } from "@/components/challenges/DailyChallengePreview";
-import {
-  TopNavigation,
-  BottomNavigation,
-} from "@/components/dashboard/Navigation";
 import { apiUrl } from "@/lib/network/api-url";
 
 const LANGUAGE_KEY = "app-preferred-language";
@@ -32,14 +28,6 @@ function getInitialLang(): string {
     return DEFAULT_LANGUAGE_ID;
   }
 }
-
-const NAV_ITEMS = [
-  { key: "home", label: "Home", href: "/", Icon: Home },
-  { key: "search", label: "Search", href: "/search", Icon: Search },
-  { key: "scan", label: "Scan", href: "/scan", Icon: ScanLine },
-  { key: "history", label: "History", href: "/history", Icon: Clock },
-  { key: "profile", label: "Profile", href: "/profile", Icon: User },
-];
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -62,10 +50,14 @@ type UserData = {
 type HistoryItem = {
   id: string;
   productId: string | null;
+  name?: string | null;
+  brand?: string | null;
+  category?: string | null;
+  barcode?: string | null;
   scannedAt: string;
-  assessment?: string;
-  score?: number;
-  source?: string;
+  assessment?: string | null;
+  score?: number | null;
+  source?: string | null;
   product?: { name: string; category?: string } | null;
 };
 
@@ -75,7 +67,8 @@ export function HomeDashboard() {
   const [lang, setLang] = useState<string>(getInitialLang);
   const labels = getDashboardLabels(lang);
 
-  const [userName, setUserName] = useState("Guest");
+  const [userName, setUserName] = useState<string>("");
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [allergies, setAllergies] = useState<string[]>([]);
   const [recentScans, setRecentScans] = useState<ScannedProduct[]>([]);
   const [concernSummary, setConcernSummary] = useState({ high: 0, moderate: 0, low: 0 });
@@ -94,7 +87,8 @@ export function HomeDashboard() {
         if (meRes.ok) {
           const mePayload = await meRes.json() as { success: boolean; data: UserData };
           if (mePayload.success && !cancelled) {
-            setUserName(mePayload.data.name || "Guest");
+            setUserName(mePayload.data.name || "");
+            setProfileLoaded(true);
             const prefs = mePayload.data.preferences;
             if (prefs) {
               const goals = prefs.healthGoals ?? [];
@@ -119,13 +113,15 @@ export function HomeDashboard() {
           const histPayload = await histRes.json() as { success: boolean; data: { history: HistoryItem[] } };
           if (histPayload.success && !cancelled) {
             const items = histPayload.data.history;
+            // `/api/history` returns the snapshot fields directly (name, brand,
+            // category, assessment) — there is no nested `product` object.
             const scans: ScannedProduct[] = items.map((h) => ({
               id: h.id,
-              name: h.product?.name ?? h.productId ?? "Unknown product",
-              category: (h.product?.category as ScannedProduct["category"]) ?? "food",
-              concern: (h.assessment as ScannedProduct["concern"]) ?? "moderate",
+              name: h.name ?? h.product?.name ?? h.productId ?? "Unknown product",
+              category: ((h.category ?? h.product?.category) as ScannedProduct["category"]) ?? "food",
+              concern: ((h.assessment ?? "moderate") as ScannedProduct["concern"]),
               scannedAt: new Date(h.scannedAt).toLocaleDateString(),
-              barcode: undefined,
+              barcode: h.barcode ?? undefined,
             }));
             setRecentScans(scans);
 
@@ -135,9 +131,14 @@ export function HomeDashboard() {
               if (level in summary) summary[level as keyof typeof summary]++;
             }
             setConcernSummary(summary);
+            setProfileLoaded(true);
           }
         }
-      } catch { /* silent */ }
+      } catch {
+        // Profile/history load failed; the dashboard still renders with
+        // explicit empty states rather than fabricated counters.
+        setProfileLoaded(true);
+      }
     }
     load();
     return () => { cancelled = true; };
@@ -153,25 +154,19 @@ export function HomeDashboard() {
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background pb-20 lg:pb-0">
-      <TopNavigation
-        items={NAV_ITEMS}
-        activeKey="home"
-        currentLanguage={lang}
-        onLanguageChange={handleLanguageChange}
-      />
-
+    <div className="flex min-h-screen flex-col bg-background">
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-5 sm:px-6 lg:px-10 lg:py-10">
         <div className="flex flex-col gap-4 lg:gap-6">
           <section className="lg:rounded-2xl lg:overflow-hidden">
             <WelcomeSection
               labels={labels.greeting}
               userName={userName}
+              profileLoaded={profileLoaded}
               allergies={allergies}
               scanCount={recentScans.length}
               healthyCount={concernSummary.low}
+              onScan={() => router.push("/scan")}
               onProfile={() => router.push("/profile")}
-              onSettings={() => router.push("/profile")}
             />
           </section>
 
@@ -181,13 +176,15 @@ export function HomeDashboard() {
               onClick={() => router.push("/search")}
             />
             <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-              <ScanHeroCard
-                labels={labels.scan}
-                onScan={() => router.push("/scan")}
-              />
-              <GamificationCard />
+              <div className="flex min-w-0 flex-col gap-6">
+                <ScanHeroCard labels={labels.scan} />
+                <RecentScansCard scans={recentScans} />
+              </div>
+              <div className="flex min-w-0 flex-col gap-6">
+                <GamificationCard />
+                <DailyChallengePreview />
+              </div>
             </div>
-            <DailyChallengePreview />
             <QuickActions />
 
             <section>
@@ -208,8 +205,6 @@ export function HomeDashboard() {
           </div>
         </div>
       </main>
-
-      <BottomNavigation items={NAV_ITEMS} activeKey="home" />
     </div>
   );
 }

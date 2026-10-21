@@ -19,7 +19,12 @@ export function ChatInput({ disabled, onSend }: ChatInputProps) {
   };
 
   return (
-    <div className="sticky bottom-0 border-t border-border bg-background/95 py-4 backdrop-blur">
+    /*
+     * Sits at the end of the fixed-height chat column. `pb-2` + the shell's
+     * safe-area handling keep it clear of the mobile tab bar; on desktop the
+     * tab bar does not exist so the extra space is simply breathing room.
+     */
+    <div className="border-t border-border bg-background/95 py-3 pb-2 backdrop-blur">
       <div className="flex items-end gap-2">
         <textarea
           value={value}

@@ -7,10 +7,14 @@ function write(level: LogLevel, message: string, fields?: Record<string, unknown
     msg: message,
     ...fields,
   };
+  const line = JSON.stringify(entry);
   if (level === "error" || level === "warn") {
-    console.error(JSON.stringify(entry));
+    console.error(line);
+  } else if (process.env.NODE_ENV === "production") {
+    // Info/debug noise stays out of the production console.
+    return;
   } else {
-    console.log(JSON.stringify(entry));
+    console.debug(line);
   }
 }
 
