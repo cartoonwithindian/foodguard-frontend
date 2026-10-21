@@ -192,18 +192,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * Pure, synchronous derivation only — calling `exchangeClerkSession()`
    * here would setState during render and loop forever.
    *
-   * In Clerk mode a live Clerk session alone is NOT enough: the app's API
-   * calls authenticate with the exchanged FoodGuard JWT, so `isAuthenticated`
-   * requires that token to exist (it is set by `login()` once the exchange
-   * succeeds, or falls back to a previously stored one). While the exchange
-   * runs, `isLoading` is true and guarded pages keep showing the spinner
-   * instead of rendering a dashboard full of 401s.
+   * The FoodGuard JWT is what every API call authenticates with, so it is
+   * the credential that decides "signed in". It can come from two places:
+   * the Clerk session exchange, or the app's own email/password form (the
+   * sign-in form is always shown, even when Clerk is configured). Requiring
+   * a live Clerk session on top of it locked email/password users out —
+   * the guard bounced them straight back to the sign-in form.
    */
-  const isAuthenticated = firebaseMode
-    ? Boolean(firebaseUser)
-    : clerkMode
-      ? clerkLoaded && Boolean(session) && Boolean(token)
-      : Boolean(token);
+  const isAuthenticated = firebaseMode ? Boolean(firebaseUser) : Boolean(token);
 
   const value = useMemo<AuthContextValue>(
     () => ({
