@@ -146,7 +146,7 @@ const en: SearchLabels = {
     backButton: "Back",
   },
   search: {
-    placeholder: "Search product, ingredient, or paste ingredient list...",
+    placeholder: "Products or ingredients...",
     clearButton: "Clear",
     searchButton: "Search",
   },
@@ -297,7 +297,7 @@ const hi: SearchLabels = {
     backButton: "वापस",
   },
   search: {
-    placeholder: "उत्पाद, सामग्री खोजें, या सामग्री सूची पेस्ट करें...",
+    placeholder: "उत्पाद या सामग्री...",
     clearButton: "साफ करें",
     searchButton: "खोजें",
   },

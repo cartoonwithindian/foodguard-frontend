@@ -12,21 +12,21 @@ const SEVERITY_CONFIG: Record<
 > = {
   high: {
     icon: AlertTriangle,
-    color: "text-red-600 dark:text-red-400",
-    bg: "bg-red-50 dark:bg-red-950/40",
-    borderColor: "border-red-200 dark:border-red-900/50",
+    color: "text-rose-700",
+    bg: "bg-rose-50",
+    borderColor: "border-rose-200",
   },
   moderate: {
     icon: AlertCircle,
-    color: "text-amber-600 dark:text-amber-400",
-    bg: "bg-amber-50 dark:bg-amber-950/40",
-    borderColor: "border-amber-200 dark:border-amber-900/50",
+    color: "text-amber-700",
+    bg: "bg-amber-50",
+    borderColor: "border-amber-200",
   },
   low: {
     icon: Info,
-    color: "text-blue-600 dark:text-blue-400",
-    bg: "bg-blue-50 dark:bg-blue-950/40",
-    borderColor: "border-blue-200 dark:border-blue-900/50",
+    color: "text-green-700",
+    bg: "bg-green-50",
+    borderColor: "border-green-200",
   },
   insufficient: {
     icon: Info,

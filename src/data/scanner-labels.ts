@@ -17,6 +17,10 @@ export type ScannerLabels = {
     searchNameDesc: string;
     addManually: string;
     addManuallyDesc: string;
+    findSimilar: string;
+    findSimilarDesc: string;
+    multiScan: string;
+    multiScanDesc: string;
     backButton: string;
     nameSearch: {
       title: string;
@@ -149,6 +153,10 @@ const en: ScannerLabels = {
     searchNameDesc: "Find a product by typing its name or brand",
     addManually: "Add Manually",
     addManuallyDesc: "Take a photo of the label or enter the barcode",
+    findSimilar: "Find Similar Products",
+    findSimilarDesc: "Upload a product photo to find similar items",
+    multiScan: "Multi-Product Scan",
+    multiScanDesc: "Point your camera at multiple products at once",
     backButton: "Back",
     nameSearch: {
       title: "Search for a product",
@@ -291,6 +299,10 @@ const hi: ScannerLabels = {
     searchNameDesc: "नाम या ब्रांड टाइप करके उत्पाद ढूंढें",
     addManually: "मैन्युअल जोड़ें",
     addManuallyDesc: "लेबल की फोटो लें या बारकोड दर्ज करें",
+    findSimilar: "समान उत्पाद खोजें",
+    findSimilarDesc: "समान उत्पाद खोजने के लिए उत्पाद फोटो अपलोड करें",
+    multiScan: "मल्टी-प्रोडक्ट स्कैन",
+    multiScanDesc: "एक साथ कई उत्पादों पर कैमरा केंद्रित करें",
     backButton: "वापस",
     nameSearch: {
       title: "उत्पाद खोजें",

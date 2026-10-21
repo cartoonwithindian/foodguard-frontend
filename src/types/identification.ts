@@ -12,6 +12,7 @@ export type ProductSource =
   | "manual_barcode" // barcode typed in manually
   | "name_search" // product-name / brand search
   | "photo_ocr" // product photo + OCR identification
+  | "visual_search" // visual similarity image search
   | "fallback"; // resolved through a fallback match
 
 /** Where a resolution came from in the local-first pipeline. */

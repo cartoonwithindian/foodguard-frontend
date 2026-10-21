@@ -32,6 +32,64 @@ import { getFoodGuardAuthHeaders } from "@/services/gamification.service";
 import { canCompressClientSide, compressImageForUpload } from "@/lib/image/compress";
 import { logger } from "@/lib/logger";
 
+/** A visually-similar product returned by the visual search service. */
+type VisualSearchHit = {
+  rank?: number;
+  productName?: string;
+  productId?: string | null;
+  score?: number;
+  imagePath?: string | null;
+};
+
+/** Optional public base URL for the visual-search product images. */
+const VISUAL_IMAGES_URL = (
+  process.env.NEXT_PUBLIC_VISUAL_IMAGES_URL || ""
+).replace(/\/+$/, "");
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)));
+}
+
+function visualImageUrl(hit: VisualSearchHit): string | undefined {
+  const imagePath = hit.imagePath;
+  if (!imagePath || !VISUAL_IMAGES_URL) return undefined;
+  const clean = decodeHtmlEntities(imagePath.replace(/^\/+/, ""));
+  return `${VISUAL_IMAGES_URL}/${clean.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+/**
+ * Convert visual-search hits into IdentifiedProduct candidates so the photo
+ * scan can offer them in the same "candidates" picker used by name search.
+ * The FAISS score is an L2 distance (lower = closer), so confidence here is a
+ * rough heuristic, not a probability.
+ */
+function visualHitsToCandidates(hits: VisualSearchHit[] | null | undefined): IdentifiedProduct[] {
+  if (!hits || hits.length === 0) return [];
+  return hits.map((hit, index) => {
+    const name = hit.productName?.trim() || "Unknown Product";
+    const distance = typeof hit.score === "number" ? hit.score : 0;
+    // L2 distance, not a probability: clamp the presentational confidence so
+    // an exact hit never renders as "100%".
+    const confidence = Math.max(0.05, Math.min(0.95, distance + 2 > 0 ? 1 / (1 + distance) : 0.05));
+    return {
+      id: hit.productId || `visual-${index + 1}`,
+      barcode: "",
+      name,
+      brand: "",
+      category: "",
+      imageUrl: visualImageUrl(hit),
+      source: "photo_ocr",
+      sourceDetail: "visual_search",
+      confidence,
+      resolutionSource: "network",
+    } satisfies IdentifiedProduct;
+  });
+}
+
 export type BarcodeLookupResponse = {
   success: boolean;
   data?: {
@@ -110,13 +168,13 @@ export type ScanLabelResponse = {
    * but the client used to drop it on the floor, so an image upload with no
    * readable barcode or OCR text degraded to `not_found`.
    */
-  similarProducts?: {
-    rank: number;
-    productName: string;
-    productId: string;
-    score: number;
+  similarProducts?: Array<{
+    rank?: number;
+    productName?: string;
+    productId?: string | null;
+    score?: number;
     imagePath?: string | null;
-  }[] | null;
+  }> | null;
   rawText?: string;
   error?: string;
 };
@@ -526,11 +584,13 @@ export async function resolveProductByPhoto(
       ingredientsText?: string;
       productName?: string;
       imageUrl?: string | null;
+      error?: { message?: string } | string | null;
     }) | null;
 
     if (!response.ok || !json?.success) {
+      const raw: unknown = json?.error;
       const message =
-        json?.error ||
+        (typeof raw === "string" ? raw : (raw && typeof raw === "object" && "message" in raw ? String((raw as { message?: unknown }).message ?? "") : "")) ||
         "We couldn't read this photo. Try a clearer, well-lit image of the packaging.";
       return { resolution: { status: "error", message, extracted }, extracted };
     }
@@ -553,17 +613,22 @@ export async function resolveProductByPhoto(
     extracted.productName = nameGuess || undefined;
 
     // 1. Barcode detected on the photo -> resolve straight through barcode.
+    let barcodeResolution: ProductResolution | null = null;
     if (barcodeValue) {
-      const resolution = await resolveProductByBarcode(barcodeValue, "photo_ocr");
-      return { resolution, extracted };
+      barcodeResolution = await resolveProductByBarcode(barcodeValue, "photo_ocr");
+      if (barcodeResolution.status === "resolved") {
+        return { resolution: { ...barcodeResolution, extracted }, extracted };
+      }
+      // Unmatched barcode -> fall through so visual-similar candidates (say,
+      // barcode present but unknown product) can still rescue the scan.
     }
 
     // Visually similar products from the hosted CLIP+FAISS service. These are a
     // *fallback* for when text matching cannot identify the product -- they are
     // never preferred over a real barcode or name match.
-    const similar = visualCandidates(json.similarProducts);
+    const similar = visualHitsToCandidates(json.similarProducts);
     const similarResolution = (): ProductResolution => {
-      const [best, ...rest] = similar;
+      const [best] = similar;
       if (similar.length === 1) {
         return { status: "resolved", product: best, extracted };
       }
@@ -581,10 +646,6 @@ export async function resolveProductByPhoto(
       if (similar.length > 0) {
         return { resolution: similarResolution(), extracted };
       }
-      return {
-        resolution: { status: "not_found", query: nameGuess, extracted },
-        extracted,
-      };
     }
 
     // 3. No barcode and no usable name. Visual similarity is the last chance to
@@ -593,10 +654,15 @@ export async function resolveProductByPhoto(
       return { resolution: similarResolution(), extracted };
     }
 
-    // 4. Nothing usable detected and nothing visually similar.
+    // 4. Nothing usable detected. If a barcode was present, report its
+    //    (failed) lookup result so the UI can show the "not found" screen.
+    if (barcodeResolution) {
+      return { resolution: { ...barcodeResolution, extracted }, extracted };
+    }
     return {
       resolution: {
         status: "not_found",
+        query: nameGuess ?? undefined,
         extracted,
       },
       extracted,

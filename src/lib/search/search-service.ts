@@ -159,6 +159,45 @@ export async function searchCatalogProducts(
   return fresh;
 }
 
+/**
+ * Best-effort image enrichment for catalog products that arrive without an
+ * imageUrl (e.g. backend demo/catalog rows). Looks up product names against
+ * the deployed frontend `/api/product-images` route (bundled DB map) and
+ * merges the resulting URLs into `imageUrl`. Never throws — on any failure the
+ * products are returned unchanged so search still works.
+ */
+export async function enrichCatalogImages<T extends { name: string; imageUrl: string | null }>(
+  products: T[],
+): Promise<T[]> {
+  const missing = products.filter((p) => !p.imageUrl);
+  if (missing.length === 0) return products;
+
+  const names = missing.map((p) => p.name).filter(Boolean);
+  if (names.length === 0) return products;
+
+  try {
+    const response = await fetch("/api/product-images", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ names }),
+    });
+    const data = (await response.json()) as {
+      success: boolean;
+      images?: Record<string, string>;
+    };
+    if (!data.success || !data.images) return products;
+
+    const byName = new Map(names.map((n, i) => [n, i]));
+    return products.map((p) => {
+      if (p.imageUrl) return p;
+      const url = data.images?.[p.name];
+      return url ? { ...p, imageUrl: url } : p;
+    });
+  } catch {
+    return products;
+  }
+}
+
 async function fetchRemote(
   query: string,
   category: string,

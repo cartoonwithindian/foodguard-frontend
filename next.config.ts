@@ -31,17 +31,18 @@ const nextConfig: NextConfig = {
   // sessions, so the wildcard pattern keeps the phone/LAN access working).
   allowedDevOrigins: ["*.cloudshell.dev", "**.*.*"],
   // This app ships no `src/app/api` handlers; every call goes to the
-  // standalone backend. Proxying `/api/*` here keeps those calls
-  // same-origin, so the browser needs only this app's port. Pointing the
-  // client straight at the backend (`NEXT_PUBLIC_API_URL`) instead makes the
-  // browser dial the backend's host and port directly, which fails whenever
-  // only this app's port is reachable — a tunnel or port-forward, a
-  // CloudShell preview, or a phone testing over LAN.
+  // standalone backend. Proxying `/api/*` here keeps those calls same-origin,
+  // so the browser needs only this app's port. `/benchmark/*` is proxied to
+  // the barcode-benchmark Angular app.
   async rewrites() {
     return [
       {
         source: "/api/:path*",
         destination: `${API_PROXY_TARGET}/api/:path*`,
+      },
+      {
+        source: "/benchmark/:path*",
+        destination: "http://127.0.0.1:4200/:path*",
       },
     ];
   },

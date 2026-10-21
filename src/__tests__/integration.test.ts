@@ -82,7 +82,11 @@ describe("end-to-end analyze", () => {
   });
 
   it("detects allergens on the label", async () => {
-    const { meta } = await runAnalysis({ ingredientsText: "Sugar, Milk Solids. Contains milk.", productName: "Choco Bar" });
+    const { meta } = await runAnalysis({
+      ingredientsText: "Sugar, Milk Solids. Contains milk.",
+      productName: "Choco Bar",
+      skipAlternatives: true,
+    });
     expect(meta.allergens.some((a) => a.allergen === "milk" && a.type === "contains")).toBe(true);
   });
 });

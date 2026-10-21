@@ -1,8 +1,15 @@
 "use client";
 
-import { ScanBarcode, Search, Camera, ArrowUpRight } from "lucide-react";
+import {
+  ScanBarcode,
+  Search,
+  Camera,
+  ArrowUpRight,
+  ScanEye,
+  LayoutGrid,
+} from "lucide-react";
 
-export type IdentifyMethod = "barcode" | "search" | "manual";
+export type IdentifyMethod = "barcode" | "search" | "manual" | "visual_search" | "multi_scan";
 
 type IdentifyLandingProps = {
   subtitle: string;
@@ -12,6 +19,10 @@ type IdentifyLandingProps = {
   searchNameDesc: string;
   addManually: string;
   addManuallyDesc: string;
+  findSimilar: string;
+  findSimilarDesc: string;
+  multiScan: string;
+  multiScanDesc: string;
   onSelect: (method: IdentifyMethod) => void;
 };
 
@@ -37,6 +48,20 @@ const methods = [
     Icon: Camera,
     accent: "bg-primary/10 text-primary",
   },
+  {
+    id: "multi_scan" as const,
+    titleKey: "multiScan" as const,
+    descriptionKey: "multiScanDesc" as const,
+    Icon: LayoutGrid,
+    accent: "bg-primary/10 text-primary",
+  },
+  {
+    id: "visual_search" as const,
+    titleKey: "findSimilar" as const,
+    descriptionKey: "findSimilarDesc" as const,
+    Icon: ScanEye,
+    accent: "bg-primary/10 text-primary",
+  },
 ];
 
 export function IdentifyLanding({
@@ -47,6 +72,10 @@ export function IdentifyLanding({
   searchNameDesc,
   addManually,
   addManuallyDesc,
+  findSimilar,
+  findSimilarDesc,
+  multiScan,
+  multiScanDesc,
   onSelect,
 }: IdentifyLandingProps) {
   const labels = {
@@ -56,6 +85,10 @@ export function IdentifyLanding({
     searchNameDesc,
     addManually,
     addManuallyDesc,
+    findSimilar,
+    findSimilarDesc,
+    multiScan,
+    multiScanDesc,
   };
 
   return (
@@ -86,5 +119,6 @@ export function IdentifyLanding({
         ))}
       </div>
     </section>
+
   );
 }

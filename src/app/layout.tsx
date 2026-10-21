@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -21,6 +21,16 @@ export const metadata: Metadata = {
   title: "FoodGuard — Make informed food choices",
   description:
     "Scan, understand, and make better-informed choices about the products you use.",
+};
+
+// The WebView host is edge-to-edge (the Android native layer draws the WebView
+// behind the status bar and pads its top via WindowInsets), so we opt into
+// viewport-fit=cover to let the browser report the real insets via
+// env(safe-area-inset-*). That is what powers the bottom safe-area padding.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

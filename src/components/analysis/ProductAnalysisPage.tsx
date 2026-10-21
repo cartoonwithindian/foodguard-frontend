@@ -37,7 +37,6 @@ import {
   createScanEventId,
   getFoodGuardAuthHeaders,
   publishGamificationUpdate,
-  submitProductScanActivity,
   type GamificationActivityResult,
 } from "@/services/gamification.service";
 import {
@@ -233,58 +232,35 @@ export function ProductAnalysisPage({
            }
          }
 
-         // Only a fresh, identified analysis can submit activity. Cached
-         // results intentionally do not trigger this path.
-         const freshProduct = json.data;
-         if (providedScanEventId && freshProduct.id && freshProduct.id !== "manual") {
-           try {
-             const activity = await submitProductScanActivity(freshProduct.id, scanEventId);
-              if (!activity.idempotent) setReward(activity);
-              if (activity.completed_challenges?.[0]) {
-                setCompletedChallenge(activity.completed_challenges[0]);
-              }
-           } catch {
-             // The analysis response may already contain the authoritative
-             // reward if the separate activity request was interrupted.
-             const reward = json.meta?.gamification;
-             if (reward) {
-               publishGamificationUpdate({
-                 total_xp: reward.total_xp,
-                 current_streak: reward.current_streak,
-                 longest_streak: reward.longest_streak,
-                 last_activity_date: reward.activity_date,
-               });
-               if (!reward.idempotent) {
-                 setReward({
-                   xp_awarded: reward.xp_awarded,
-                   total_xp: reward.total_xp,
-                   current_streak: reward.current_streak,
-                   longest_streak: reward.longest_streak,
-                   activity_date: reward.activity_date,
-                   idempotent: reward.idempotent,
-                 });
-               }
-             }
-           }
-           if (freshProduct.ingredients?.length) {
-             void submitIngredientViewActivity(
-               freshProduct.id,
-               `${scanEventId}:ingredients`,
-             ).then((viewActivity) => {
-               if (!viewActivity.idempotent && viewActivity.completed_challenges[0]) {
-                 setCompletedChallenge(viewActivity.completed_challenges[0]);
-               }
-             }).catch(() => {
-               // Ingredient challenges are best-effort and never block analysis.
-             });
-           }
-         } else if (providedScanEventId && json.meta?.gamification) {
+         // Rewards come from the /api/analyze response itself. The separate
+         // self-service product_scan call was removed: it let a client assert a
+         // scan and mint XP with no analysis behind it, so that endpoint is now
+         // retired server-side. Cached results never award anything.
+         if (providedScanEventId && json.meta?.gamification) {
            publishGamificationUpdate({
              total_xp: json.meta.gamification.total_xp,
              current_streak: json.meta.gamification.current_streak,
              longest_streak: json.meta.gamification.longest_streak,
              last_activity_date: json.meta.gamification.activity_date,
            });
+         }
+
+         // Ingredient views are a separate, non-scoring activity and still have
+         // their own endpoint.
+         const freshProduct = json.data;
+         if (providedScanEventId && freshProduct.ingredients?.length) {
+           void submitIngredientViewActivity(
+             freshProduct.id,
+             `${scanEventId}:ingredients`,
+           )
+             .then((viewActivity) => {
+               if (!viewActivity.idempotent && viewActivity.completed_challenges[0]) {
+                 setCompletedChallenge(viewActivity.completed_challenges[0]);
+               }
+             })
+             .catch(() => {
+               // Ingredient challenges are best-effort and never block analysis.
+             });
          }
       } catch (error) {
         if (cancelled) return;
@@ -407,7 +383,7 @@ export function ProductAnalysisPage({
           </div>
           <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
             {/* Left column — primary analysis */}
-            <div className="flex flex-col gap-6">
+            <div className="flex min-w-0 flex-col gap-6">
               <ProductHeader
                 name={product.name}
                 brand={product.brand}
@@ -459,7 +435,7 @@ export function ProductAnalysisPage({
             </div>
 
             {/* Right column — supporting information */}
-            <div className="flex flex-col gap-6">
+            <div className="flex min-w-0 flex-col gap-6">
               {product.nutrition && (
                 <NutritionAnalysis
                   title={labels.nutrition.title}

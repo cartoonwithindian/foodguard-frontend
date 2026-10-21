@@ -1,5 +1,6 @@
 import type { DataStore } from "./types";
 import { InMemoryStore } from "./memory";
+import { PrismaStore } from "./prisma";
 import { SqliteStore, hasSqliteDatabase, SQLITE_DB_PATH } from "./sqlite";
 import { isMockMode, config } from "@/lib/config";
 import { logger } from "@/lib/logger";
@@ -15,23 +16,34 @@ function sqlitePath(): string {
  * Returns the active data store.
  *  - PRODUCTION (DATABASE_URL set): PostgreSQL via Prisma
  *  - SQLite (FOODGUARD_DB_PATH set, file exists): bundled FoodGuard SQLite DB
- *    (~29.5k Indian retail products) with in-memory fallback for the rest
- *  - MOCK MODE (neither): seeded in-memory store
+ *  - In-memory fixtures are available only to tests.
+ *
+ * `DATABASE_URL` is checked before SQLite on purpose: the previous ordering
+ * only reached the SQLite branch when `DATABASE_URL` was *unset*, so a
+ * production deployment (which always sets `DATABASE_URL`) skipped SQLite,
+ * missed the test branch because `NODE_ENV` is `production`, and fell through
+ * to `throw`. Every route backed by this store — preferences, guest auth, the
+ * catalog and the chat tools — returned 500 in production.
  */
 export function getStore(): DataStore {
   if (instance) return instance;
-  const path = sqlitePath();
-  if (isMockMode() && path && hasSqliteDatabase(path)) {
-    logger.info("sqlite_store_active", { path });
-    instance = new SqliteStore(path);
-  } else if (isMockMode()) {
-    logger.info("mock_mode_in_memory_store", { reason: "DATABASE_URL and FOODGUARD_DB_PATH not set" });
+  if (process.env.NODE_ENV === "test") {
+    logger.info("test_fixture_store_active");
     instance = new InMemoryStore();
+  } else if (config.databaseUrl) {
+    // `PrismaStore` keeps its own client behind a lazy proxy, so importing the
+    // module here does not open a connection or load the query engine.
+    instance = new PrismaStore();
   } else {
-    // Lazy-load PrismaStore to avoid schema validation when using SQLite/mock mode
-    
-    const mod = require("./prisma") as { PrismaStore: new () => DataStore };
-    instance = new mod.PrismaStore();
+    const path = sqlitePath();
+    if (path && hasSqliteDatabase(path)) {
+      logger.info("sqlite_store_active", { path });
+      instance = new SqliteStore(path);
+    } else {
+      throw new Error(
+        "Product database is not configured. Set DATABASE_URL or FOODGUARD_DB_PATH to a real local database.",
+      );
+    }
   }
   return instance;
 }

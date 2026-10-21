@@ -9,6 +9,7 @@ import {
   searchCatalogProducts,
   normalizeSearchQuery,
   dedupeCatalogProducts,
+  enrichCatalogImages,
 } from "@/lib/search/search-service";
 import type { CatalogProductItem } from "@/lib/store/sqlite";
 import { useNetworkQuality } from "@/lib/network/use-network";
@@ -95,12 +96,13 @@ export function SearchPage({ lang = "en", initialQuery = "" }: SearchPageProps) 
           signal: controller.signal,
         });
         if (controllerRef.current !== controller) return;
+        const enriched = await enrichCatalogImages(result.products);
         setPage(result.page);
         setHasMore(result.hasMore);
         setResults((prev) =>
           append
-            ? dedupeCatalogProducts([...prev, ...result.products])
-            : dedupeCatalogProducts(result.products),
+            ? dedupeCatalogProducts([...prev, ...enriched])
+            : dedupeCatalogProducts(enriched),
         );
         setTotal(result.total);
         if (result.categories.length > 0) setCategories(result.categories);
@@ -228,19 +230,15 @@ export function SearchPage({ lang = "en", initialQuery = "" }: SearchPageProps) 
             <ArrowLeft className="size-4" aria-hidden="true" />
             {labels.header.backButton}
           </Link>
-          <h1 className="ml-4 text-sm font-semibold text-foreground">
+          <h1 className="ml-4 text-base font-semibold text-foreground">
             {labels.header.title}
           </h1>
         </div>
       </header>
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
-        <p className="mb-5 text-center text-sm text-muted-foreground">
-          {labels.header.subtitle}
-        </p>
-
         {/* Search Input */}
-        <div className="mb-6">
+        <div className="mb-2">
           <IngredientInput
             placeholder={labels.search.placeholder}
             searchButton={labels.search.searchButton}
@@ -248,6 +246,9 @@ export function SearchPage({ lang = "en", initialQuery = "" }: SearchPageProps) 
             onSearch={doSearch}
           />
         </div>
+        <p className="mb-6 text-center text-xs leading-relaxed text-muted-foreground sm:text-sm">
+          {labels.header.subtitle}
+        </p>
 
         {/* Idle: suggestions + criteria + browse categories */}
         {phase === "idle" && showSuggestions && (
@@ -374,7 +375,7 @@ export function SearchPage({ lang = "en", initialQuery = "" }: SearchPageProps) 
                 searchAgainLabel={labels.empty.searchAgain}
                 tryNameLabel={labels.empty.tryName}
                 scanBarcodeLabel={labels.empty.scan}
-                onScan={() => router.push("/scan?open=camera&mode=barcode")}
+                onScan={() => router.push("/scan")}
                 categoryTitle=""
                 popularTitle=""
                 categories={[]}

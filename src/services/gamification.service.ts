@@ -88,36 +88,3 @@ export async function fetchGamificationProfile(signal?: AbortSignal): Promise<Ga
   });
   return readEnvelope<GamificationProfile>(response);
 }
-
-/**
- * Submit only the observed product action. XP, streak, product validity, and
- * event time are calculated by the backend.
- */
-export async function submitProductScanActivity(
-  productId: string,
-  eventId: string,
-): Promise<GamificationActivityResult> {
-  const response = await fetch(apiUrl("/api/gamification/activity"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...getFoodGuardAuthHeaders(),
-    },
-    body: JSON.stringify({
-      action_type: "product_scan",
-      product_id: productId,
-      event_id: eventId,
-    }),
-  });
-  const result = await readEnvelope<GamificationActivityResult>(response);
-  publishGamificationUpdate({
-    total_xp: result.total_xp,
-    current_streak: result.current_streak,
-    longest_streak: result.longest_streak,
-    last_activity_date: result.activity_date,
-  });
-  if (typeof window !== "undefined" && (result.completed_challenges?.length ?? 0) > 0) {
-    window.dispatchEvent(new Event("foodguard:challenges-updated"));
-  }
-  return result;
-}

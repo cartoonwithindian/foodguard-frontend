@@ -12,9 +12,10 @@ import {
 } from "@/lib/resolve-product";
 import type { ExtractedInfo, IdentifiedProduct, ProductResolution } from "@/types/identification";
 import { IdentifyLanding, type IdentifyMethod } from "./IdentifyLanding";
-import { BarcodeScanner } from "./BarcodeScanner";
-import { NameSearchForm } from "./NameSearchForm";
+import { MultiProductScanner } from "./multi/MultiProductScanner";
+import { BarcodeScanner } from "./BarcodeScanner";import { NameSearchForm } from "./NameSearchForm";
 import { ManualAddPanel } from "./ManualAddPanel";
+import { VisualSearchPanel } from "./VisualSearchPanel";
 import { CandidatesList } from "./CandidatesList";
 import { ScanLoading } from "./ScanLoading";
 import { ScanError } from "./ScanError";
@@ -89,7 +90,7 @@ export function ScannerPage({ lang = "en", initialScreen = "identify" }: Scanner
       setExtracted(null);
       return;
     }
-    if (screen !== "identify") {
+if (screen !== "identify") {
       setScreen("identify");
       return;
     }
@@ -110,10 +111,14 @@ export function ScannerPage({ lang = "en", initialScreen = "identify" }: Scanner
     switch (screen) {
       case "barcode":
         return labels.tabs.barcode;
+      case "multi_scan":
+        return labels.identify.multiScan;
       case "search":
         return labels.identify.searchName;
       case "manual":
         return labels.identify.addManually;
+      case "visual_search":
+        return labels.identify.findSimilar;
       default:
         return labels.header.title;
     }
@@ -282,6 +287,10 @@ export function ScannerPage({ lang = "en", initialScreen = "identify" }: Scanner
               searchNameDesc={labels.identify.searchNameDesc}
               addManually={labels.identify.addManually}
               addManuallyDesc={labels.identify.addManuallyDesc}
+              findSimilar={labels.identify.findSimilar}
+              findSimilarDesc={labels.identify.findSimilarDesc}
+              multiScan={labels.identify.multiScan}
+              multiScanDesc={labels.identify.multiScanDesc}
               onSelect={(method) => goTo(method)}
             />
             <ScanTips title={labels.tips.title} items={labels.tips.items} />
@@ -330,10 +339,37 @@ export function ScannerPage({ lang = "en", initialScreen = "identify" }: Scanner
           />
         );
 
+      case "visual_search":
+        return (
+          <VisualSearchPanel
+            onPick={(product) =>
+              openAnalysis(
+                {
+                  id: product.id || product.name,
+                  name: product.name,
+                  brand: "",
+                  category: "other",
+                  source: "visual_search",
+                  confidence: 0.8,
+                  barcode: product.barcode ?? "",
+                },
+                extracted,
+              )
+            }
+          />
+        );
+
       default:
         return null;
     }
   };
+
+  // Multi-product scanner is a standalone full-page experience with its
+  // own header — render it without the single-product chrome. Its Back
+  // button returns to /scan, which remounts this page on "identify".
+  if (screen === "multi_scan" && !loading && !resolution) {
+    return <MultiProductScanner />;
+  }
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
