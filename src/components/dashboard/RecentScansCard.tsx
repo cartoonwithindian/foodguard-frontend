@@ -10,6 +10,7 @@ const CONCERN_LABELS: Record<ScannedProduct["concern"], string> = {
   low: "✓ Low concern",
   moderate: "! Moderate",
   high: "!! High concern",
+  insufficient: "? Insufficient data",
 };
 
 /**
@@ -41,7 +42,7 @@ export function RecentScansCard({ scans }: { scans: ScannedProduct[] }) {
       />
       <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {scans.slice(0, 6).map((scan) => {
-          const colors = CONCERN_COLORS[scan.concern];
+          const colors = CONCERN_COLORS[scan.concern] ?? CONCERN_COLORS.insufficient;
           return (
             <li key={scan.id}>
               <button

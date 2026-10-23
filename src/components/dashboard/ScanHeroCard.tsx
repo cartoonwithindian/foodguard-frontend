@@ -56,7 +56,7 @@ const HERO_COPY = {
   linkButtonLabel: "Use an image link instead",
   similarTitle: "Similar products we found",
   similarHint:
-    "We couldn't read the label, so we matched your photo against our product library. Pick one to analyse.",
+    "We matched your photo against our product library. Pick the right product to analyse.",
 };
 
 type PanelMode = "closed" | "camera" | "barcode" | "link";

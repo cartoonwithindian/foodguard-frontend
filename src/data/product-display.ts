@@ -13,7 +13,7 @@ export type ProductCategory =
   | "household"
   | "other";
 
-export type ConcernLevel = "high" | "moderate" | "low";
+export type ConcernLevel = "high" | "moderate" | "low" | "insufficient";
 
 export const CATEGORY_LABELS: Record<ProductCategory, string> = {
   food: "Food & Beverage",
@@ -30,4 +30,5 @@ export const CONCERN_COLORS: Record<
   high: { bg: "bg-red-50 dark:bg-red-950/40", text: "text-red-700 dark:text-red-400", dot: "bg-red-500" },
   moderate: { bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-700 dark:text-amber-400", dot: "bg-amber-500" },
   low: { bg: "bg-green-50 dark:bg-green-950/40", text: "text-green-700 dark:text-green-400", dot: "bg-green-600" },
+  insufficient: { bg: "bg-gray-50 dark:bg-gray-900/40", text: "text-gray-700 dark:text-gray-400", dot: "bg-gray-400" },
 };

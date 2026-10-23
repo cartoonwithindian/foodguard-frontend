@@ -5,7 +5,7 @@ export type ProductCategory =
   | "household"
   | "other";
 
-export type ConcernLevel = "high" | "moderate" | "low";
+export type ConcernLevel = "high" | "moderate" | "low" | "insufficient";
 
 export type ScannedProduct = {
   id: string;

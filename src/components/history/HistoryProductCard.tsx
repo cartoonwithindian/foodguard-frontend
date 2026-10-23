@@ -31,13 +31,15 @@ export function HistoryProductCard({
       ? CONCERN_COLORS.moderate
       : product.assessment === "low"
         ? CONCERN_COLORS.low
-        : { bg: "bg-gray-50 dark:bg-gray-900/40", text: "text-gray-700 dark:text-gray-400", dot: "bg-gray-400" };
+        : CONCERN_COLORS.insufficient;
   const concernLabel =
     product.assessment === "high"
       ? "High Concern"
       : product.assessment === "moderate"
         ? "Moderate Concern"
-        : "Low Concern";
+        : product.assessment === "low"
+          ? "Low Concern"
+          : "Insufficient Evidence";
 
   const formattedDate = new Date(product.scannedAt).toLocaleDateString("en-US", {
     day: "numeric",

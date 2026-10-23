@@ -176,6 +176,9 @@ export type ScanLabelResponse = {
     imagePath?: string | null;
   }> | null;
   rawText?: string;
+  productName?: string | null;
+  /** Short-lived same-origin URL of the uploaded photo. */
+  imageUrl?: string | null;
   error?: string;
 };
 
@@ -561,14 +564,19 @@ export async function resolveProductByPhoto(
     form.append("detectBarcode", "true");
 
     // Best-effort client-side CLIP embedding so the backend can return
-    // visually-similar products via FAISS only. Never blocks the scan: any
-    // failure (model unavailable / slow / errored) just omits the vector.
+    // visually-similar products via FAISS only. This must never hold up the
+    // upload: the first scan would otherwise wait for the ~90 MB vision model
+    // to download from the Hub, which looked like a stuck upload. Give a warm
+    // model a moment, then send the image and let the backend embed it.
     try {
       const { config } = await import("@/lib/config");
       if (config.visualSearch.clientEmbed && typeof window !== "undefined") {
         const { embedImage } = await import("@/lib/visual-embed");
-        const vector = await embedImage(blob);
-        form.append("embedding", JSON.stringify(vector));
+        const embedding = await Promise.race([
+          embedImage(blob).catch(() => null),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
+        ]);
+        if (embedding) form.append("embedding", JSON.stringify(embedding));
       }
     } catch {
       // ignore — visual search candidates are optional
@@ -585,6 +593,8 @@ export async function resolveProductByPhoto(
       productName?: string;
       imageUrl?: string | null;
       error?: { message?: string } | string | null;
+      /** The backend's jsonSuccess() envelope. */
+      data?: ScanLabelResponse;
     }) | null;
 
     if (!response.ok || !json?.success) {
@@ -595,21 +605,26 @@ export async function resolveProductByPhoto(
       return { resolution: { status: "error", message, extracted }, extracted };
     }
 
+    // `/api/scan/label` responds through jsonSuccess(), so the scan payload is
+    // nested under `data`. Reading the top level made every upload look like
+    // "we couldn't read this photo" even when OCR had succeeded.
+    const payload: ScanLabelResponse = json.data ?? json;
+
     // Fill extracted info
-    const barcodeValue = json.barcode?.value ?? null;
-    const ocrText = json.ocr?.text ?? json.rawText ?? "";
+    const barcodeValue = payload.barcode?.value ?? null;
+    const ocrText = payload.ocr?.text ?? payload.rawText ?? "";
     extracted.barcode = barcodeValue ?? undefined;
     extracted.ocrText = ocrText || undefined;
-    extracted.ingredientsText = json.ingredientsText ?? undefined;
-    extracted.nutrition = json.nutrition ?? null;
-    extracted.ocrConfidence = json.ocr?.confidence ?? undefined;
-    extracted.needsReview = json.ocr?.needsReview ?? false;
+    extracted.ingredientsText = payload.ingredientsText ?? undefined;
+    extracted.nutrition = payload.nutrition ?? null;
+    extracted.ocrConfidence = payload.ocr?.confidence ?? undefined;
+    extracted.needsReview = payload.ocr?.needsReview ?? false;
     // The backend hosts the uploaded photo at a short-lived same-origin URL
     // (10-minute TTL) so the analysis page can show the user the exact image
     // they scanned.
-    extracted.imageUrl = json.imageUrl ?? extracted.imageUrl ?? undefined;
+    extracted.imageUrl = payload.imageUrl ?? extracted.imageUrl ?? undefined;
 
-    const nameGuess = guessProductName(ocrText, json.product?.name);
+    const nameGuess = guessProductName(ocrText, payload.product?.name);
     extracted.productName = nameGuess || undefined;
 
     // 1. Barcode detected on the photo -> resolve straight through barcode.
@@ -626,7 +641,7 @@ export async function resolveProductByPhoto(
     // Visually similar products from the hosted CLIP+FAISS service. These are a
     // *fallback* for when text matching cannot identify the product -- they are
     // never preferred over a real barcode or name match.
-    const similar = visualHitsToCandidates(json.similarProducts);
+    const similar = visualHitsToCandidates(payload.similarProducts);
     const similarResolution = (): ProductResolution => {
       const [best] = similar;
       if (similar.length === 1) {
@@ -773,13 +788,21 @@ export function guessProductName(ocrText: string, known?: string | null): string
     "distributed",
   ]);
 
+  // Measurement/label furniture that often sits right under the brand and
+  // would otherwise be picked as the product name ("Net Weight 70g").
+  const furniture =
+    /^(net\s*(weight|wt|quantity|qty)|per\s+(100|serving)|energy|protein|carbohydrate|fat|sugar|salt|nutrition|best\s+before|mfg|exp|fssai)/i;
+
   for (const line of lines) {
     const lower = line.toLowerCase();
     if (stop.has(lower)) continue;
-    if (/^\d/.test(line)) continue; // barcodes / percentages / dates
+    if (furniture.test(line)) continue;
     if (lower.includes("www.") || lower.includes(".com") || lower.includes(".in")) continue;
     if (line.length < 2 || line.length > 60) continue;
     if (/^[\d\s.,%]+$/.test(line)) continue;
+    // Require at least two letters: skips barcodes, dates and percentages but
+    // keeps real names that legitimately start with a digit ("2-Minute...").
+    if ((line.match(/[A-Za-z]/g) ?? []).length < 2) continue;
     return line;
   }
   return null;
